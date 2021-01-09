@@ -5,13 +5,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="msgraph-async",
-    version="0.0.1",
+    version="0.0.2",
     author="Noam Meerovitch",
     author_email="noamm91@gmail.com",
     description="Client for using Microsoft Graph API asynchronously",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com",
+    url="https://github.com/noamm91/msgraph-async",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

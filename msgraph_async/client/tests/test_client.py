@@ -46,13 +46,13 @@ class TestClient(asynctest.TestCase):
 
     async def test_list_users_manual_token(self):
         i = self.get_instance()
-        res, status = await i.list_users(token=TestClient._token)
+        res, status = await i.list_users_bulk(token=TestClient._token)
         self.assertEqual(1, len(res["value"]))
 
     async def test_list_users_managed_token(self):
         i = self.get_instance()
         await i.manage_token(TestClient._test_app_id, TestClient._test_app_secret, TestClient._test_tenant_id)
-        res, status = await i.list_users()
+        res, status = await i.list_users_bulk()
         self.assertEqual(1, len(res["value"]))
 
     async def test_manage_token(self):
@@ -85,16 +85,20 @@ class TestClient(asynctest.TestCase):
         self.assertEqual(status, HTTPStatus.OK)
         self.assertIsNotNone(token["access_token"])
 
+    async def test_list_all_users(self):
+        i = self.get_instance()
+        users = []
+        async for user in i.list_all_users(token=TestClient._token):
+            users.append(user)
+        self.assertEqual(1, len(users))
+
     @asynctest.skip("need real application")
     async def test_create_subscription(self):
         i = self.get_instance()
-        res, status = await i.list_users(token=TestClient._token)
-        user_id = res["value"][0]["id"]
         try:
             res = await i.create_subscription(
                 "created", "https://mila.bitdam.com/api/v1.0/office365/notification",
-                SubscriptionResourcesTemplates.Mailbox, 10,
-                user_id=user_id, token=TestClient._token)
+                SubscriptionResourcesTemplates.Mailbox, 10, user_id=TestClient._user_id, token=TestClient._token)
         except Unauthorized as e:
             pass
 

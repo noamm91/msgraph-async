@@ -12,5 +12,5 @@ The client is async, meaning all functions are awaitable.
 
 The client supports automatic token refresh, this is done by calling `manage_token` passing it app-id, app-secret and tenant-id.
 
-If token is managed, then there's no need to pass it to any of the client call.
-However, if the token is not managed, you will need to provide it with every call as part of kwargs (e.g. list_users(token="your access token here").
+If token is managed, then there's no need to pass the token to any of the client call.
+However, if the token is not managed, you will need to provide it with every call as part of kwargs (e.g. list_users(token="your access token here")).

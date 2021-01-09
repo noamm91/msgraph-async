@@ -10,9 +10,12 @@ COUNT = "$count"
 FILTER = "$filter"
 SEARCH = "search"
 
-# Users
+# Resources
 USERS = "/users"
 SUBSCRIPTIONS = "/subscriptions"
+
+# next_key
+NEXT_KEY = "@odata.nextLink"
 
 
 # Subscription Resources

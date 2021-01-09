@@ -140,7 +140,7 @@ class GraphClient:
         :return: None if the operation was successful, else - raises GraphClientException with info
         """
         if self._managed:
-            raise Exception("the token is already managed")
+            raise GraphClientException("Token is already managed")
         try:
             await self._refresh_token(app_id, app_secret, tenant_id)
             self._scheduler.add_job(self._refresh_token, 'interval', args=[app_id, app_secret, tenant_id],
@@ -165,7 +165,7 @@ class GraphClient:
         return res, status
 
     @authorized
-    async def list_users(self, **kwargs):
+    async def list_users_bulk(self, **kwargs):
         url = self._build_url(V1_EP, USERS, **kwargs)
         res, status = await self._request("GET", url, kwargs["_req_headers"],
                                           expected_statuses=kwargs.get("expected_statuses"))
@@ -176,6 +176,18 @@ class GraphClient:
         res, status = await self._request("GET", next_url, kwargs["_req_headers"],
                                           expected_statuses=kwargs.get("expected_statuses"))
         return res, status
+
+    @authorized
+    async def list_all_users(self, **kwargs):
+        res, status = await self.list_users_bulk(**kwargs)
+        next_url = res.get(NEXT_KEY)
+        for user in res["value"]:
+            yield user
+        while next_url:
+            res, status = await self.list_more_users(next_url, **kwargs)
+            next_url = res.get(NEXT_KEY)
+            for user in res["value"]:
+                yield user
 
     @authorized
     async def create_subscription(self, change_type, notification_url, resource, minutes_to_expiration,
