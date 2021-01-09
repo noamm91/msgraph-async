@@ -20,7 +20,7 @@ class TestClient(asynctest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        credentials_file = os.path.join(os.path.dirname(__file__), "test_app_and_tenant_credentials")
+        credentials_file = os.path.join(os.path.dirname(__file__), "test_credentials")
         with open(credentials_file) as fp:
             details = json.load(fp)
 
