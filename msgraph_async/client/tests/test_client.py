@@ -14,6 +14,8 @@ class TestClient(asynctest.TestCase):
     _test_tenant_id = None
     _token = None
     _user_id = None
+    _total_users_count = None
+    _bulk_size = None
 
     def setUp(self):
         pass
@@ -28,6 +30,8 @@ class TestClient(asynctest.TestCase):
         cls._test_app_secret = details["app_secret"]
         cls._test_tenant_id = details["tenant_id"]
         cls._user_id = details["user_id"]
+        cls._total_users_count = 25
+        cls._bulk_size = 10
 
         token_params = {
             'grant_type': 'client_credentials',
@@ -44,16 +48,22 @@ class TestClient(asynctest.TestCase):
     def get_instance(self):
         return GraphClient(enable_logging=True)
 
-    async def test_list_users_manual_token(self):
+    async def test_list_users_bulk_manual_token(self):
         i = self.get_instance()
-        res, status = await i.list_users_bulk(token=TestClient._token)
-        self.assertEqual(1, len(res["value"]))
 
-    async def test_list_users_managed_token(self):
+        res, status = await i.list_users_bulk(token=TestClient._token)
+
+        expected = min(TestClient._bulk_size, TestClient._total_users_count)
+        self.assertEqual(expected, len(res["value"]))
+
+    async def test_list_users_bulk_managed_token(self):
         i = self.get_instance()
         await i.manage_token(TestClient._test_app_id, TestClient._test_app_secret, TestClient._test_tenant_id)
+
         res, status = await i.list_users_bulk()
-        self.assertEqual(1, len(res["value"]))
+
+        expected = min(TestClient._bulk_size, TestClient._total_users_count)
+        self.assertEqual(expected, len(res["value"]))
 
     async def test_manage_token(self):
         i = self.get_instance()
@@ -90,7 +100,7 @@ class TestClient(asynctest.TestCase):
         users = []
         async for user in i.list_all_users(token=TestClient._token):
             users.append(user)
-        self.assertEqual(1, len(users))
+        self.assertEqual(TestClient._total_users_count, len(users))
 
     @asynctest.skip("need real application")
     async def test_create_subscription(self):
