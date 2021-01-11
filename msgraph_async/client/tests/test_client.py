@@ -5,6 +5,7 @@ import asyncio
 from msgraph_async.client.client import GraphClient
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
+from msgraph_async.common.odata_query import *
 import requests
 
 
@@ -50,8 +51,10 @@ class TestClient(asynctest.TestCase):
 
     async def test_list_users_bulk_manual_token(self):
         i = self.get_instance()
+        odata_query = ODataQuery()
+        odata_query.top = TestClient._bulk_size
 
-        res, status = await i.list_users_bulk(token=TestClient._token)
+        res, status = await i.list_users_bulk(token=TestClient._token, odata_query=odata_query)
 
         expected = min(TestClient._bulk_size, TestClient._total_users_count)
         self.assertEqual(expected, len(res["value"]))
@@ -59,8 +62,10 @@ class TestClient(asynctest.TestCase):
     async def test_list_users_bulk_managed_token(self):
         i = self.get_instance()
         await i.manage_token(TestClient._test_app_id, TestClient._test_app_secret, TestClient._test_tenant_id)
+        odata_query = ODataQuery()
+        odata_query.top = TestClient._bulk_size
 
-        res, status = await i.list_users_bulk()
+        res, status = await i.list_users_bulk(odata_query=odata_query)
 
         expected = min(TestClient._bulk_size, TestClient._total_users_count)
         self.assertEqual(expected, len(res["value"]))

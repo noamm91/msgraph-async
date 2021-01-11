@@ -4,6 +4,7 @@ import json
 import aiohttp
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
+from msgraph_async.common.odata_query import *
 from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -57,15 +58,12 @@ class GraphClient:
 
     @staticmethod
     def _build_url(version, resource, resource_id=None, **kwargs):
-        search, count, filter, select = kwargs.get("search"), kwargs.get("count"), kwargs.get("filter"), kwargs.get(
-            "select")
+        odata_query: ODataQuery = kwargs.get("odata_query")
         url = GRAPH_BASE_URL + version + resource
         if resource_id:
             url += f"/{resource_id}"
-        if search or count or filter or select:
-            url += "?"
-        for param in []:
-            url += param
+        if odata_query:
+            url += str(odata_query)
         return url
 
     @staticmethod
