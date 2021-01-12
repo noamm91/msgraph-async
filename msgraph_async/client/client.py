@@ -57,11 +57,15 @@ class GraphClient:
         return self._token
 
     @staticmethod
-    def _build_url(version, resource, resource_id=None, **kwargs):
+    def _build_url(version, resources: typing.List[typing.Tuple], **kwargs):
+        # url = GRAPH_BASE_URL + version + resource
+        url = GRAPH_BASE_URL + version
+        for resource, resource_id in resources:
+            url += resource
+            if resource_id:
+                url += f"/{resource_id}"
+
         odata_query: ODataQuery = kwargs.get("odata_query")
-        url = GRAPH_BASE_URL + version + resource
-        if resource_id:
-            url += f"/{resource_id}"
         if odata_query:
             url += str(odata_query)
         return url
@@ -74,12 +78,12 @@ class GraphClient:
             return {"authorization": f"bearer {token}"}
 
     @staticmethod
-    def _get_resource(resource_template: SubscriptionResourcesTemplates, user_id):
-        return resource_template.value.format(user_id=user_id)
+    def _get_resource(resource_template: SubscriptionResourcesTemplates, resource_id):
+        return resource_template.value.format(resource_id)
 
     @staticmethod
     def _get_microsoft_time_format(minutes_to_expiration: int):
-        val = (datetime.utcnow() + timedelta(minutes=minutes_to_expiration)).strftime("%Y-%m-%dT%H:%M:%S.%f") + "3Z"
+        val = (datetime.utcnow() + timedelta(minutes=minutes_to_expiration)).strftime("%Y-%m-%dT%H:%M:%S.%f") + "0Z"
         return val
 
     def _log(self, level, msg):
@@ -157,14 +161,14 @@ class GraphClient:
         :param
         :return:
         """
-        url = self._build_url(V1_EP, USERS, user_id, **kwargs)
+        url = self._build_url(V1_EP, [(USERS, user_id)], **kwargs)
         res, status = await self._request(
             "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
         return res, status
 
     @authorized
     async def list_users_bulk(self, **kwargs):
-        url = self._build_url(V1_EP, USERS, **kwargs)
+        url = self._build_url(V1_EP, [(USERS, None)], **kwargs)
         res, status = await self._request("GET", url, kwargs["_req_headers"],
                                           expected_statuses=kwargs.get("expected_statuses"))
         return res, status
@@ -192,12 +196,12 @@ class GraphClient:
                                   client_state=None, latest_supported_tls_version=None, user_id=None, **kwargs):
         if type(resource) == SubscriptionResourcesTemplates:
             if not user_id:
-                raise GraphClientException(f"user id must be specified with resource template ({resource})")
+                raise GraphClientException(f"user id must be specified with resource template ({resource.name})")
             resource = self._get_resource(resource, user_id)
 
         expiration_date_time = self._get_microsoft_time_format(minutes_to_expiration)
 
-        url = self._build_url(V1_EP, SUBSCRIPTIONS)
+        url = self._build_url(V1_EP, [(SUBSCRIPTIONS, None)])
         body = {
             "changeType": change_type,
             "notificationUrl": notification_url,
@@ -215,9 +219,54 @@ class GraphClient:
         return res, status
 
     @authorized
-    async def renew_subscription(self, subscription_id, minutes_to_expiration):
+    async def renew_subscription(self, subscription_id: str, minutes_to_expiration: int, **kwargs):
+        url = self._build_url(V1_EP, [(SUBSCRIPTIONS, subscription_id)])
+        expiration_date_time = self._get_microsoft_time_format(minutes_to_expiration)
+        body = {
+            "expirationDateTime": expiration_date_time
+        }
+
+        res, status = await self._request("PATCH", url, kwargs["_req_headers"], json.dumps(body),
+                                          kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def delete_subscription(self, subscription_id: str, **kwargs):
+        url = self._build_url(V1_EP, [(SUBSCRIPTIONS, subscription_id)])
+        res, status = await self._request(
+            "DELETE", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def list_user_mails_bulk(self, user_id, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, None)], **kwargs)
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def list_more_user_mails(self, next_url, **kwargs):
+        res, status = await self._request("GET", next_url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def list_all_user_mails(self, user_id, **kwargs):
+        res, status = await self.list_user_mails_bulk(user_id, **kwargs)
+        next_url = res.get(NEXT_KEY)
+        for mail in res["value"]:
+            yield mail
+        while next_url:
+            res, status = await self.list_more_user_mails(next_url, **kwargs)
+            next_url = res.get(NEXT_KEY)
+            for mail in res["value"]:
+                yield mail
+
+    @authorized
+    async def get_mail(self):
         pass
 
     @authorized
-    async def delete_subscription(self, subscription_id):
+    async def move_mail(self):
         pass
+

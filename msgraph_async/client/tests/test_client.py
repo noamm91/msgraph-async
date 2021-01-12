@@ -2,6 +2,7 @@ import os
 import json
 import asynctest
 import asyncio
+from datetime import datetime, timedelta
 from msgraph_async.client.client import GraphClient
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
@@ -17,7 +18,7 @@ class TestClient(asynctest.TestCase):
     _user_id = None
     _total_users_count = None
     _bulk_size = None
-    notifications_url = None
+    _notification_url = None
 
     def setUp(self):
         pass
@@ -51,7 +52,7 @@ class TestClient(asynctest.TestCase):
     def get_instance(self):
         return GraphClient(enable_logging=True)
 
-    async def test_list_users_bulk_manual_token(self):
+    async def test_list_users_bulk_manual_token_with_top(self):
         i = self.get_instance()
         odata_query = ODataQuery()
         odata_query.top = TestClient._bulk_size
@@ -61,7 +62,18 @@ class TestClient(asynctest.TestCase):
         expected = min(TestClient._bulk_size, TestClient._total_users_count)
         self.assertEqual(expected, len(res["value"]))
 
-    async def test_list_users_bulk_managed_token(self):
+    async def test_list_users_bulk_manual_token_with_top_and_starts_with_filter(self):
+        i = self.get_instance()
+        odata_query = ODataQuery()
+        odata_query.top = TestClient._bulk_size
+        f = Filter()
+        f.constrains = [Constrain("displayName", LogicalOperator.STARTS_WITH, "N")]
+        odata_query.filter = f
+        res, status = await i.list_users_bulk(token=TestClient._token, odata_query=odata_query)
+        #  self.assertEqual(1, len(res["value"]))
+        self.assertEqual(status, HTTPStatus.OK)
+
+    async def test_list_users_bulk_managed_token_with_top(self):
         i = self.get_instance()
         await i.manage_token(TestClient._test_app_id, TestClient._test_app_secret, TestClient._test_tenant_id)
         odata_query = ODataQuery()
@@ -109,26 +121,85 @@ class TestClient(asynctest.TestCase):
             users.append(user)
         self.assertEqual(TestClient._total_users_count, len(users))
 
-    @asynctest.skip("need real application")
-    async def test_create_subscription(self):
+    async def test_mailbox_subscription_lifecycle(self):
         i = self.get_instance()
+        minutes_to_expire = 10
+        # time_to_expire = str(datetime.utcnow() + timedelta(minutes=minutes_to_expire))
+        res, status = await i.create_subscription(
+            "created", TestClient._notification_url, SubscriptionResourcesTemplates.Mailbox, minutes_to_expire,
+            user_id=TestClient._user_id, token=TestClient._token)
+
+        subscription_id = res.get("id")
+        self.assertIsNotNone(subscription_id)
+
+        self.assertEqual(status, HTTPStatus.CREATED)
+
+        minutes_to_expire = 15
+        res, status = await i.renew_subscription(subscription_id, minutes_to_expire, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.OK)
+
+        res, status = await i.delete_subscription(subscription_id, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.NO_CONTENT)
+
+    async def test_create_subscription_resource_no_user_id(self):
+        i = self.get_instance()
+        minutes_to_expire = 10
         try:
-            res = await i.create_subscription(
-                "created", TestClient.notifications_url,
-                SubscriptionResourcesTemplates.Mailbox, 10, user_id=TestClient._user_id, token=TestClient._token)
-        except Unauthorized as e:
+            await i.create_subscription(
+                "created", TestClient._notification_url, SubscriptionResourcesTemplates.Mailbox, minutes_to_expire,
+                token=TestClient._token)
+            self.fail("should raise an exception")
+        except GraphClientException:
             pass
 
-    @asynctest.skip("soon")
-    async def test_throttling(self):
+    async def test_list_user_mails_bulk_manual_token(self):
         i = self.get_instance()
-        loop = asyncio.get_event_loop()
-        try:
-            # res, status = await i.list_users(token=TestClient._token)
-            results = await asyncio.gather(*[i.get_user(user_id=TestClient._user_id, token=TestClient._token) for _ in range(1000)])
-        except Exception as e:
-            print(str(e))
-            self.fail(str(e))
 
-        for i, result in enumerate(results):
-            self.assertEqual(result[1], HTTPStatus.OK)
+        res, status = await i.list_user_mails_bulk(TestClient._user_id, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.OK)
+
+    async def test_list_more_user_mails_manual_token(self):
+        i = self.get_instance()
+
+        q = ODataQuery()
+        q.top = 6
+        start = "2021-01-01T00:00:00.000Z"
+        end = "2021-01-02T00:00:00.000Z"
+        f = Filter()
+        f.constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
+                        Constrain("receivedDateTime", LogicalOperator.LT, end)]
+        f.logical_connector = LogicalConnector.AND
+        q.filter = f
+
+        res, status = await i.list_user_mails_bulk(TestClient._user_id, token=TestClient._token, odata_query=q)
+
+        self.assertEqual(status, HTTPStatus.OK)
+        next = res.get("@odata.nextLink")
+        if not next:
+            self.fail("should have next..")
+
+        res, status = await i.list_more_user_mails(next, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.OK)
+
+    async def test_list_all_user_mails(self):
+        i = self.get_instance()
+
+        q = ODataQuery()
+        q.top = 6
+        start = "2021-01-01T00:00:00.000Z"
+        end = "2021-01-02T00:00:00.000Z"
+        f = Filter()
+        f.constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
+                        Constrain("receivedDateTime", LogicalOperator.LT, end)]
+        f.logical_connector = LogicalConnector.AND
+        q.filter = f
+
+        mails = []
+        async for mail in i.list_all_user_mails(TestClient._user_id, token=TestClient._token, odata_query=q):
+            mails.append(mail)
+
+        self.assertEqual(10, len(mails))

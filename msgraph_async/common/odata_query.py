@@ -16,8 +16,8 @@ class LogicalOperator(int, Enum):
     GT = 4, "{attribute} gt {val}"
     LE = 5, "{attribute} le {val}"
     GE = 6, "{attribute} ge {val}"
-    STARTS_WITH = 7, "startsWith({attribute}, {val})"
-    ENDS_WITH = 8, "endsWith({attribute}, {val})"
+    STARTS_WITH = 7, "startswith({attribute}, '{val}')"
+    ENDS_WITH = 8, "endswith({attribute}, '{val}')"
 
 
 class LogicalConnector(int, Enum):

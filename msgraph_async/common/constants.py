@@ -13,6 +13,7 @@ SEARCH = "search"
 # Resources
 USERS = "/users"
 SUBSCRIPTIONS = "/subscriptions"
+MAILS = "/messages"
 
 # next_key
 NEXT_KEY = "@odata.nextLink"
@@ -20,5 +21,10 @@ NEXT_KEY = "@odata.nextLink"
 
 # Subscription Resources
 class SubscriptionResourcesTemplates(Enum):
-    Mailbox = "Users('{user_id}')/messages"
-    Inbox   = "Users('{user_id}')/mailFolders('Inbox')/messages"
+    Mailbox             = "Users('{}')/messages"
+    Inbox               = "Users('{}')/mailFolders('Inbox')/messages"
+    DriveRoot           = "users/{}/drive/root"
+    SiteDocumentLibrary = "sites/{}/drive/root"
+    GroupDriveRoot      = "groups/{}/drive/root"
+    TenantTeamsChannels = "teams/allMessages"
+    TenantChats         = "chats/allMessages"
