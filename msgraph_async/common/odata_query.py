@@ -27,7 +27,7 @@ class LogicalConnector(int, Enum):
 
 class Constrain:
 
-    def __init__(self, attribute, logical_operator: LogicalOperator, value: str):
+    def __init__(self, attribute: str, logical_operator: LogicalOperator, value: str):
         self._attribute = attribute
         self._logical_operator = logical_operator
         self._value = value

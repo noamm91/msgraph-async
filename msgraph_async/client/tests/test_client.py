@@ -17,6 +17,7 @@ class TestClient(asynctest.TestCase):
     _user_id = None
     _total_users_count = None
     _bulk_size = None
+    notifications_url = None
 
     def setUp(self):
         pass
@@ -31,6 +32,7 @@ class TestClient(asynctest.TestCase):
         cls._test_app_secret = details["app_secret"]
         cls._test_tenant_id = details["tenant_id"]
         cls._user_id = details["user_id"]
+        cls._notification_url = details["notification_url"]
         cls._total_users_count = 25
         cls._bulk_size = 10
 
@@ -112,7 +114,7 @@ class TestClient(asynctest.TestCase):
         i = self.get_instance()
         try:
             res = await i.create_subscription(
-                "created", "https://mila.bitdam.com/api/v1.0/office365/notification",
+                "created", TestClient.notifications_url,
                 SubscriptionResourcesTemplates.Mailbox, 10, user_id=TestClient._user_id, token=TestClient._token)
         except Unauthorized as e:
             pass
