@@ -1,5 +1,5 @@
 import unittest
-from msgraph_async.common.odata_query import ODataQuery
+from msgraph_async.common.odata_query import *
 
 
 class TestODataQuery(unittest.TestCase):
@@ -28,3 +28,17 @@ class TestODataQuery(unittest.TestCase):
         i.top = 10
         i.select = ["subject", "sender"]
         self.assertEqual(str(i), "?$select=subject,sender&$top=10")
+
+    def test_filter_query(self):
+        i = self.get_instance()
+
+        constrain1 = Constrain("city", LogicalOperator.NE, "New-York")
+        constrain2 = Constrain("displayName", LogicalOperator.EQ, "Noam Meirovitch")
+
+        f = Filter()
+        f.constrains = [constrain1, constrain2]
+        f.logical_connector = LogicalConnector.OR
+
+        i.filter = f
+
+        self.assertEqual("?$filter=city ne New-York or displayName eq Noam Meirovitch", str(i))

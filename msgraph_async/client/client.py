@@ -100,7 +100,7 @@ class GraphClient:
             if 'application/json' in resp.headers['Content-Type']:
                 r: dict = await resp.json()
             else:
-                r: bytes = resp.read()
+                r: bytes = await resp.read()
 
         if status in expected_statuses:
             return r, status

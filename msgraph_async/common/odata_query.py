@@ -16,10 +16,13 @@ class LogicalOperator(int, Enum):
     GT = 4, "{attribute} gt {val}"
     LE = 5, "{attribute} le {val}"
     GE = 6, "{attribute} ge {val}"
-    AND = 7, "{attribute} and {val}"
-    OR = 8, "{attribute} or {val}"
-    STARTS_WITH = 9, "startsWith({attribute}, {val})"
-    ENDS_WITH = 10, "endsWith({attribute}, {val})"
+    STARTS_WITH = 7, "startsWith({attribute}, {val})"
+    ENDS_WITH = 8, "endsWith({attribute}, {val})"
+
+
+class LogicalConnector(int, Enum):
+    AND = 1
+    OR = 2
 
 
 class Constrain:
@@ -33,6 +36,35 @@ class Constrain:
         return self._logical_operator.template.format(attribute=self._attribute, val=self._value)
 
 
+class Filter:
+    def __init__(self):
+        self._constrains = None
+        self._logical_connector = None
+
+    @property
+    def constrains(self) -> typing.List[Constrain]:
+        return self._constrains
+
+    @constrains.setter
+    def constrains(self, value):
+        if type(value) is not list:
+            raise ValueError("constrains must be list")
+        for val in value:
+            if type(val) is not Constrain:
+                raise ValueError("all values must be constrains")
+        self._constrains = value
+
+    @property
+    def logical_connector(self) -> LogicalConnector:
+        return self._logical_connector
+
+    @logical_connector.setter
+    def logical_connector(self, value):
+        if type(value) is not LogicalConnector:
+            raise ValueError("logical connector must be of type LogicalConnector")
+        self._logical_connector = value
+
+
 class ODataQuery:
     def __init__(self):
         self._count = None
@@ -42,7 +74,7 @@ class ODataQuery:
         self._top = None
 
     @property
-    def count(self):
+    def count(self) -> bool:
         """Retrieves the total count of matching resources."""
         return self._count
 
@@ -53,7 +85,7 @@ class ODataQuery:
         self._count = value
 
     @property
-    def expand(self):
+    def expand(self) -> str:
         """Retrieves related resources."""
         return self._expand
 
@@ -64,21 +96,18 @@ class ODataQuery:
         self._expand = value
 
     @property
-    def filter(self):
+    def filter(self) -> Filter:
         """Filters results (rows)."""
         return self._filter
 
     @filter.setter
-    def filter(self, value: typing.List[Constrain]):
-        if type(value) is not list:
-            raise ValueError("filter must be list of constrains")
-        for val in value:
-            if type(val) is not Constrain:
-                raise ValueError("all values must be constrains")
+    def filter(self, value: Filter):
+        if type(value) is not Filter:
+            raise ValueError("filter must of Filter type")
         self._filter = value
 
     @property
-    def select(self):
+    def select(self) -> typing.List[str]:
         """Filters properties (columns)."""
         return self._select
 
@@ -92,7 +121,7 @@ class ODataQuery:
         self._select = value
 
     @property
-    def top(self):
+    def top(self) -> int:
         """Sets the page size of results."""
         return self._top
 
@@ -104,9 +133,11 @@ class ODataQuery:
 
     def _build_filter(self):
         res = ""
-        for constrain in self.filter:  # type: Constrain
-            res += str(constrain) + " "
-        return res[:-1]
+        for constrain in self.filter.constrains:  # type: Constrain
+            if res:
+                res += f" {self.filter.logical_connector.name.lower()} "
+            res += str(constrain)
+        return res
 
     def __str__(self):
         if not self.count and not self.expand and not self.filter and not self.select and not self.top:
@@ -116,8 +147,8 @@ class ODataQuery:
             res.append(f"$count={str(self.count).lower()}")
         if self.expand:
             res.append(f"$expand={self.expand.lower()}")
-        if self.filter:
-            res.append(self._build_filter())
+        if self.filter and self.filter.constrains:
+            res.append(f"$filter={self._build_filter()}")
         if self.select:
             res.append(f"$select={','.join(self.select)}")
         if self.top:
