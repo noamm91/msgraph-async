@@ -1,5 +1,0 @@
-baseURL = "https://noamm91.github.io/msgraph-async/"
-languageCode = "en-us"
-title = "My New Hugo Site"
-theme = "ananke"
-publishDir = "docs"
