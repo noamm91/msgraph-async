@@ -1,4 +1,4 @@
-baseURL = "https://github.com/noamm91/msgraph-async"
+baseURL = "https://noamm91.github.io/msgraph-async/"
 languageCode = "en-us"
 title = "My New Hugo Site"
 theme = "ananke"
