@@ -14,7 +14,7 @@ from functools import wraps
 def authorized(func):
     @wraps(func)
     def actual(*args, **kwargs):
-        client: GraphClient = args[0]
+        client: GraphAdminClient = args[0]
         if not client._token and not kwargs.get("token"):
             raise Exception('Token is not managed so you must explicitly provide it')
 
@@ -28,7 +28,7 @@ def authorized(func):
     return actual
 
 
-class GraphClient:
+class GraphAdminClient:
 
     def __init__(self, enable_logging=False):
         self._session = aiohttp.ClientSession()
@@ -58,7 +58,6 @@ class GraphClient:
 
     @staticmethod
     def _build_url(version, resources: typing.List[typing.Tuple], **kwargs):
-        # url = GRAPH_BASE_URL + version + resource
         url = GRAPH_BASE_URL + version
         for resource, resource_id in resources:
             url += resource
@@ -68,6 +67,10 @@ class GraphClient:
         odata_query: ODataQuery = kwargs.get("odata_query")
         if odata_query:
             url += str(odata_query)
+
+        if kwargs.get("_value_query_param"):
+            url += "/$value"
+
         return url
 
     @staticmethod
@@ -82,7 +85,7 @@ class GraphClient:
         return resource_template.value.format(resource_id)
 
     @staticmethod
-    def _get_microsoft_time_format(minutes_to_expiration: int):
+    def _get_msgraph_time_format(minutes_to_expiration: int):
         val = (datetime.utcnow() + timedelta(minutes=minutes_to_expiration)).strftime("%Y-%m-%dT%H:%M:%S.%f") + "0Z"
         return val
 
@@ -98,18 +101,22 @@ class GraphClient:
     async def _request(self, method, url, headers: dict = None, data: dict = None, expected_statuses=None):
         if not expected_statuses:
             expected_statuses = (HTTPStatus.OK, HTTPStatus.NO_CONTENT, HTTPStatus.CREATED)
-        async with self._session.request(method, url, headers=headers, data=data) as resp:
-            status = resp.status
-            resp_headers = resp.headers
-            if 'application/json' in resp.headers['Content-Type']:
-                r: dict = await resp.json()
-            else:
-                r: bytes = await resp.read()
+        try:
+            async with self._session.request(method, url, headers=headers, data=data) as resp:
+                status = resp.status
+                resp_headers = resp.headers
+                if 'application/json' in resp.headers['Content-Type']:
+                    r: dict = await resp.json()
+                else:
+                    r: bytes = await resp.read()
 
-        if status in expected_statuses:
-            return r, status
-        else:
-            raise status2exception.get(status, UnknownError)(r, resp_headers)
+            if status in expected_statuses:
+                return r, status
+            else:
+                raise status2exception.get(status, UnknownError)(r, resp_headers)
+        except Exception as e:
+            self._log(logging.ERROR, f"exception while making a request: {str(e)}")
+            raise GraphClientException("unknown error while make a request", e)
 
     async def acquire_token(self, app_id, app_secret, tenant_id):
         """
@@ -199,7 +206,7 @@ class GraphClient:
                 raise GraphClientException(f"user id must be specified with resource template ({resource.name})")
             resource = self._get_resource(resource, user_id)
 
-        expiration_date_time = self._get_microsoft_time_format(minutes_to_expiration)
+        expiration_date_time = self._get_msgraph_time_format(minutes_to_expiration)
 
         url = self._build_url(V1_EP, [(SUBSCRIPTIONS, None)])
         body = {
@@ -221,7 +228,7 @@ class GraphClient:
     @authorized
     async def renew_subscription(self, subscription_id: str, minutes_to_expiration: int, **kwargs):
         url = self._build_url(V1_EP, [(SUBSCRIPTIONS, subscription_id)])
-        expiration_date_time = self._get_microsoft_time_format(minutes_to_expiration)
+        expiration_date_time = self._get_msgraph_time_format(minutes_to_expiration)
         body = {
             "expirationDateTime": expiration_date_time
         }
@@ -263,10 +270,14 @@ class GraphClient:
                 yield mail
 
     @authorized
-    async def get_mail(self):
-        pass
+    async def get_mail(self, user_id, message_id, as_mime=False, **kwargs):
+        if as_mime:
+            kwargs["_value_query_param"] = True
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id)], **kwargs)
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
 
     @authorized
     async def move_mail(self):
         pass
-

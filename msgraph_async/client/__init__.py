@@ -1,1 +1,1 @@
-from .client import GraphClient
+from .client import GraphAdminClient

@@ -3,7 +3,7 @@ import json
 import asynctest
 import asyncio
 from datetime import datetime, timedelta
-from msgraph_async.client.client import GraphClient
+from msgraph_async.client.client import GraphAdminClient
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
 from msgraph_async.common.odata_query import *
@@ -19,6 +19,7 @@ class TestClient(asynctest.TestCase):
     _total_users_count = None
     _bulk_size = None
     _notification_url = None
+    _valid_message_id = None
 
     def setUp(self):
         pass
@@ -34,6 +35,7 @@ class TestClient(asynctest.TestCase):
         cls._test_tenant_id = details["tenant_id"]
         cls._user_id = details["user_id"]
         cls._notification_url = details["notification_url"]
+        cls._valid_message_id = details["valid_message_id"]
         cls._total_users_count = 25
         cls._bulk_size = 10
 
@@ -50,7 +52,7 @@ class TestClient(asynctest.TestCase):
         cls._token = res_json['access_token']
 
     def get_instance(self):
-        return GraphClient(enable_logging=True)
+        return GraphAdminClient(enable_logging=True)
 
     async def test_list_users_bulk_manual_token_with_top(self):
         i = self.get_instance()
@@ -66,11 +68,8 @@ class TestClient(asynctest.TestCase):
         i = self.get_instance()
         odata_query = ODataQuery()
         odata_query.top = TestClient._bulk_size
-        f = Filter()
-        f.constrains = [Constrain("displayName", LogicalOperator.STARTS_WITH, "N")]
-        odata_query.filter = f
+        odata_query.filter = Filter([Constrain("displayName", LogicalOperator.STARTS_WITH, "N")])
         res, status = await i.list_users_bulk(token=TestClient._token, odata_query=odata_query)
-        #  self.assertEqual(1, len(res["value"]))
         self.assertEqual(status, HTTPStatus.OK)
 
     async def test_list_users_bulk_managed_token_with_top(self):
@@ -168,11 +167,9 @@ class TestClient(asynctest.TestCase):
         q.top = 6
         start = "2021-01-01T00:00:00.000Z"
         end = "2021-01-02T00:00:00.000Z"
-        f = Filter()
-        f.constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
-                        Constrain("receivedDateTime", LogicalOperator.LT, end)]
-        f.logical_connector = LogicalConnector.AND
-        q.filter = f
+        constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
+                      Constrain("receivedDateTime", LogicalOperator.LT, end)]
+        q.filter = Filter(constrains, LogicalConnector.AND)
 
         res, status = await i.list_user_mails_bulk(TestClient._user_id, token=TestClient._token, odata_query=q)
 
@@ -192,14 +189,30 @@ class TestClient(asynctest.TestCase):
         q.top = 6
         start = "2021-01-01T00:00:00.000Z"
         end = "2021-01-02T00:00:00.000Z"
-        f = Filter()
-        f.constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
-                        Constrain("receivedDateTime", LogicalOperator.LT, end)]
-        f.logical_connector = LogicalConnector.AND
-        q.filter = f
+        constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
+                      Constrain("receivedDateTime", LogicalOperator.LT, end)]
+        q.filter = Filter(constrains, LogicalConnector.AND)
 
         mails = []
         async for mail in i.list_all_user_mails(TestClient._user_id, token=TestClient._token, odata_query=q):
             mails.append(mail)
 
         self.assertEqual(10, len(mails))
+
+    async def test_get_mail(self):
+        i = self.get_instance()
+
+        mail, status = await i.get_mail(TestClient._user_id, TestClient._valid_message_id, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertEqual(dict, type(mail))
+        self.assertEqual(TestClient._valid_message_id, mail["id"])
+
+    async def test_get_mail_as_mime(self):
+        i = self.get_instance()
+
+        mail, status = await i.get_mail(
+            TestClient._user_id, TestClient._valid_message_id, as_mime=True, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertEqual(bytes, type(mail))

@@ -26,20 +26,57 @@ class LogicalConnector(int, Enum):
 
 
 class Constrain:
-
+    """
+    Constrains is the building block that creates a Filter
+    Each constrain is composed from 'attribute' (i.e. o365 resource supported attribute for filtering),
+    'logical_operator' which specify the operation between the attribute and the value (e.g. equal) and a
+    'value'.
+    Constrain example for O365 message resource which has the attribute subject equals to "Trip Ahead" will be instanced
+    like this: c = Constrain("subject", LogicalOperator.EQ, "Trip Ahead"
+    """
     def __init__(self, attribute: str, logical_operator: LogicalOperator, value: str):
-        self._attribute = attribute
-        self._logical_operator = logical_operator
-        self._value = value
+        self.attribute = attribute
+        self.logical_operator = logical_operator
+        self.value = value
+
+    @property
+    def attribute(self) -> str:
+        return self._attribute
+
+    @attribute.setter
+    def attribute(self, val: str):
+        if type(val) != str:
+            raise ValueError("attribute must be string")
+        self._attribute = val
+
+    @property
+    def logical_operator(self) -> LogicalOperator:
+        return self._logical_operator
+
+    @logical_operator.setter
+    def logical_operator(self, val: LogicalOperator):
+        if type(val) != LogicalOperator:
+            raise ValueError("logical operator must be of type LogicalOperator")
+        self._logical_operator = val
+
+    @property
+    def value(self) -> str:
+        return self._value
+
+    @value.setter
+    def value(self, val: str):
+        if type(val) != str:
+            raise ValueError("value must be str")
+        self._value = val
 
     def __str__(self):
         return self._logical_operator.template.format(attribute=self._attribute, val=self._value)
 
 
 class Filter:
-    def __init__(self):
-        self._constrains = None
-        self._logical_connector = None
+    def __init__(self, constrains: typing.List[Constrain], logical_connector: LogicalConnector = None):
+        self.constrains = constrains
+        self.logical_connector = logical_connector
 
     @property
     def constrains(self) -> typing.List[Constrain]:
@@ -60,8 +97,13 @@ class Filter:
 
     @logical_connector.setter
     def logical_connector(self, value):
-        if type(value) is not LogicalConnector:
+        if len(self.constrains) == 1:
+            if value is not None:
+                raise ValueError("logical connector has no meaning with single constrain")
+
+        elif type(value) is not LogicalConnector:
             raise ValueError("logical connector must be of type LogicalConnector")
+
         self._logical_connector = value
 
 
