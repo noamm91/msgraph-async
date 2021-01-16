@@ -7,6 +7,9 @@ The client currently supports the following Graph API:
 4. Create Subscription
 5. Renew Subscription
 6. Delete Subscription
+7. List mails
+8. Get mail
+
 
 The client is async, meaning all functions are awaitable.
 
