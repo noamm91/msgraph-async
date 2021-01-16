@@ -11,7 +11,7 @@ setuptools.setup(
     description="Client for using Microsoft Graph API asynchronously",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/noamm91/msgraph-async",
+    url="https://noamm91.github.io/msgraph-async",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
