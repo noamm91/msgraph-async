@@ -1,37 +1,38 @@
-## Welcome to GitHub Pages
+## Introduction & Examples
 
-You can use the [editor on GitHub](https://github.com/noamm91/msgraph-async/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+The purpose of this package is to provide an easy to use, async client for Microsoft Graph API.
+At this moment, the client is more of an "Admin-Client", that means that it's not in the context of a single user rather of an external tool, operating over some tenants.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+In order to use the package you will have to install it:
 
-### Markdown
+`pip install msgraph-async`
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+and then `import` the client and create an instance:
 
-```markdown
-Syntax highlighted code block
+``from msgraph_async import GraphAdminClient`
+client = GraphAdminClient()``
 
-# Header 1
-## Header 2
-### Header 3
+### Working with Tokens
 
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+In order make a requests to Graph API, you will need an access token.
+`msgraph_async` provide you with 2 ways of working with tokens:
+1. Manual - you will have to call `acquire_token` and then provide the `token`for every API call:
 ```
+token_info, status = client.acquire_token(YOUR_APP_ID, YOUR_APP_SECRET, TARGET_TENANT_ID)
+my_token = token_info["access_token]
+client.list_users(token=my_token)
+```
+Please note that in this scenario, you are responsible for the token.
+That means, you will have to acquire new one once it's expired.
+If you wish to avoid managing the token yourself, consider using the second option.
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+2. Managed - you will have to call `manage_token` once, and that's it.
+```
+client.manage_token(YOUR_APP_ID, YOUR_APP_SECRET, TARGET_TENANT_ID)
+client.list_users()
+```
+Please note the advantages of having a managed token:
+1. You don't need to pass it to every API call
+2. You don't need to acquire new one near expiration, the client takes care of it for you.
 
-### Jekyll Themes
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/noamm91/msgraph-async/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
