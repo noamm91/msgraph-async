@@ -1,6 +1,7 @@
 ## Introduction & Examples
 
 The purpose of this package is to provide an easy to use, async client for Microsoft Graph API.
+
 At this moment, the client is more of an "Admin-Client", that means that it's not in the context of a single user rather of an external tool, operating over some tenants.
 
 In order to use the package you will have to install it:
@@ -9,8 +10,10 @@ In order to use the package you will have to install it:
 
 and then `import` the client and create an instance:
 
-``from msgraph_async import GraphAdminClient`
-client = GraphAdminClient()``
+```
+from msgraph_async import GraphAdminClient
+client = GraphAdminClient()
+```
 
 ### Working with Tokens
 
@@ -32,7 +35,7 @@ client.manage_token(YOUR_APP_ID, YOUR_APP_SECRET, TARGET_TENANT_ID)
 client.list_users()
 ```
 Please note the advantages of having a managed token:
-1. You don't need to pass it to every API call
-2. You don't need to acquire new one near expiration, the client takes care of it for you.
+- You don't need to pass it to every API call
+- You don't need to acquire new one near expiration, the client takes care of it for you.
 
 
