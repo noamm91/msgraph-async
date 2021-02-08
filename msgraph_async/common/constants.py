@@ -20,11 +20,18 @@ NEXT_KEY = "@odata.nextLink"
 
 
 # Subscription Resources
-class SubscriptionResourcesTemplates(Enum):
-    Mailbox             = "Users('{}')/messages"
-    Inbox               = "Users('{}')/mailFolders('Inbox')/messages"
-    DriveRoot           = "users/{}/drive/root"
-    SiteDocumentLibrary = "sites/{}/drive/root"
-    GroupDriveRoot      = "groups/{}/drive/root"
-    TenantTeamsChannels = "teams/allMessages"
-    TenantChats         = "chats/allMessages"
+class SubscriptionResources(str, Enum):
+
+    def __new__(cls, value, resource_data_included: bool=None):
+        subscription_resource = str.__new__(cls, value)
+        subscription_resource._value_ = value
+        subscription_resource.resource_data_included = resource_data_included
+        return subscription_resource
+
+    Mailbox             = "users('{}')/messages", False
+    Inbox               = "users('{}')/mailFolders('Inbox')/messages", False
+    DriveRoot           = "users/{}/drive/root", False
+    SiteDocumentLibrary = "sites/{}/drive/root", False
+    GroupDriveRoot      = "groups/{}/drive/root", False
+    TenantTeamsChannels = "teams/allMessages", True
+    TenantChats         = "chats/allMessages", True

@@ -125,7 +125,7 @@ class TestClient(asynctest.TestCase):
         minutes_to_expire = 10
         # time_to_expire = str(datetime.utcnow() + timedelta(minutes=minutes_to_expire))
         res, status = await i.create_subscription(
-            "created", TestClient._notification_url, SubscriptionResourcesTemplates.Mailbox, minutes_to_expire,
+            "created", TestClient._notification_url, SubscriptionResources.Mailbox, minutes_to_expire,
             user_id=TestClient._user_id, token=TestClient._token)
 
         subscription_id = res.get("id")
@@ -133,10 +133,14 @@ class TestClient(asynctest.TestCase):
 
         self.assertEqual(status, HTTPStatus.CREATED)
 
+        await asyncio.sleep(2)
+
         minutes_to_expire = 15
         res, status = await i.renew_subscription(subscription_id, minutes_to_expire, token=TestClient._token)
 
         self.assertEqual(status, HTTPStatus.OK)
+
+        await asyncio.sleep(2)
 
         res, status = await i.delete_subscription(subscription_id, token=TestClient._token)
 
@@ -147,7 +151,7 @@ class TestClient(asynctest.TestCase):
         minutes_to_expire = 10
         try:
             await i.create_subscription(
-                "created", TestClient._notification_url, SubscriptionResourcesTemplates.Mailbox, minutes_to_expire,
+                "created", TestClient._notification_url, SubscriptionResources.Mailbox, minutes_to_expire,
                 token=TestClient._token)
             self.fail("should raise an exception")
         except GraphClientException:
@@ -197,7 +201,7 @@ class TestClient(asynctest.TestCase):
         async for mail in i.list_all_user_mails(TestClient._user_id, token=TestClient._token, odata_query=q):
             mails.append(mail)
 
-        self.assertEqual(10, len(mails))
+        self.assertEqual(9, len(mails))
 
     async def test_get_mail(self):
         i = self.get_instance()

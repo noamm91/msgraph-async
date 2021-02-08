@@ -2,6 +2,7 @@ import typing
 import logging
 import json
 import aiohttp
+from base64 import b64encode
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
 from msgraph_async.common.odata_query import *
@@ -81,7 +82,7 @@ class GraphAdminClient:
             return {"authorization": f"bearer {token}"}
 
     @staticmethod
-    def _get_resource(resource_template: SubscriptionResourcesTemplates, resource_id):
+    def _get_resource(resource_template: SubscriptionResources, resource_id):
         return resource_template.value.format(resource_id)
 
     @staticmethod
@@ -199,23 +200,42 @@ class GraphAdminClient:
                 yield user
 
     @authorized
-    async def create_subscription(self, change_type, notification_url, resource, minutes_to_expiration,
-                                  client_state=None, latest_supported_tls_version=None, user_id=None, **kwargs):
-        if type(resource) == SubscriptionResourcesTemplates:
+    async def create_subscription(
+            self, change_type, notification_url, resource: SubscriptionResources, minutes_to_expiration,
+            client_state=None, latest_supported_tls_version=None, user_id=None, life_cycle_url=None,
+            certificate_path=None, **kwargs):
+
+        if not resource.resource_data_included:
             if not user_id:
-                raise GraphClientException(f"user id must be specified with resource template ({resource.name})")
-            resource = self._get_resource(resource, user_id)
+                raise GraphClientException(f"user id must be specified with resource ({resource.name})")
+            resource_str = self._get_resource(resource, user_id)
+            body = {}
+        else:
+            if not (life_cycle_url and certificate_path):
+                raise GraphClientException(f"user id must be specified with resource ({resource.name})")
+            resource_str = resource.value
+
+            with open(certificate_path) as f:
+                certificate = f.read()
+                b64_certificate = b64encode(certificate.encode()).decode()
+
+            body = {
+                "includeResourceData": True,
+                "lifecycleNotificationUrl": life_cycle_url,
+                "encryptionCertificate": b64_certificate,
+                "encryptionCertificateId": "CertificateId"
+            }
 
         expiration_date_time = self._get_msgraph_time_format(minutes_to_expiration)
 
         url = self._build_url(V1_EP, [(SUBSCRIPTIONS, None)])
-        body = {
+        body.update({
             "changeType": change_type,
             "notificationUrl": notification_url,
-            "resource": resource,
+            "resource": resource_str,
             "expirationDateTime": expiration_date_time,
             "clientState": "secretClientValue"
-        }
+        })
         if client_state:
             body["clientState"] = client_state
 
