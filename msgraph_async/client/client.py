@@ -106,7 +106,7 @@ class GraphAdminClient:
             async with self._session.request(method, url, headers=headers, data=data) as resp:
                 status = resp.status
                 resp_headers = resp.headers
-                if 'application/json' in resp.headers['Content-Type']:
+                if resp.headers.get('Content-Type') and 'application/json' in resp.headers['Content-Type']:
                     r: dict = await resp.json()
                 else:
                     r: bytes = await resp.read()
@@ -114,10 +114,10 @@ class GraphAdminClient:
             if status in expected_statuses:
                 return r, status
             else:
-                raise status2exception.get(status, UnknownError)(r, resp_headers)
+                raise status2exception.get(status, UnknownError)(url, r, resp_headers)
         except Exception as e:
             self._log(logging.ERROR, f"exception while making a request: {str(e)}")
-            raise GraphClientException("unknown error while make a request", e)
+            raise e
 
     async def acquire_token(self, app_id, app_secret, tenant_id):
         """
@@ -207,7 +207,7 @@ class GraphAdminClient:
 
         if not resource.resource_data_included:
             if not user_id:
-                raise GraphClientException(f"user id must be specified with resource ({resource.name})")
+                raise GraphClientException(f"user id must be specified with resource '{resource.name}'")
             resource_str = self._get_resource(resource, user_id)
             body = {}
         else:

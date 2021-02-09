@@ -1,97 +1,102 @@
 from http import HTTPStatus
 
 
-class BaseError(Exception):
+class GraphClientException(Exception):
+
+    def __init__(self, message):
+        self.message = message
+
+
+class BaseHttpError(Exception):
+
+    def __init__(self, request_url, response_content, response_headers):
+        Exception.__init__(self)
+        self.request_url = request_url
+        self.response_content = response_content
+        self.response_headers = response_headers
+
+
+class UnknownError(BaseHttpError):
     pass
 
 
-class GraphClientException(BaseError):
+class BadRequest(BaseHttpError):
     pass
 
 
-class UnknownError(BaseError):
-    pass
-
-class BadRequest(BaseError):
+class Unauthorized(BaseHttpError):
     pass
 
 
-class Unauthorized(BaseError):
+class Forbidden(BaseHttpError):
     pass
 
 
-class Forbidden(BaseError):
+class NotFound(BaseHttpError):
     pass
 
 
-class NotFound(BaseError):
+class MethodNotAllowed(BaseHttpError):
     pass
 
 
-class MethodNotAllowed(BaseError):
+class NotAcceptable(BaseHttpError):
     pass
 
 
-class NotAcceptable(BaseError):
+class Conflict(BaseHttpError):
     pass
 
 
-class Conflict(BaseError):
+class Gone(BaseHttpError):
     pass
 
 
-class Gone(BaseError):
+class LengthRequired(BaseHttpError):
     pass
 
 
-class LengthRequired(BaseError):
+class PreconditionFailed(BaseHttpError):
     pass
 
 
-class PreconditionFailed(BaseError):
+class RequestEntityTooLarge(BaseHttpError):
     pass
 
 
-class RequestEntityTooLarge(BaseError):
+class UnsupportedMediaType(BaseHttpError):
     pass
 
 
-class UnsupportedMediaType(BaseError):
+class RequestedRangeNotSatisfiable(BaseHttpError):
     pass
 
 
-class RequestedRangeNotSatisfiable(BaseError):
+class UnprocessableEntity(BaseHttpError):
     pass
 
 
-class UnprocessableEntity(BaseError):
+class TooManyRequests(BaseHttpError):
     pass
 
 
-class TooManyRequests(BaseError):
-
-    def __init__(self, *args, **kwargs):
-        BaseError.__init__(self)
-        print("TooManyRequests")
-
-
-class InternalServerError(BaseError):
+class InternalServerError(BaseHttpError):
     pass
 
 
-class NotImplemented(BaseError):
+class NotImplemented(BaseHttpError):
     pass
 
 
-class ServiceUnavailable(BaseError):
+class ServiceUnavailable(BaseHttpError):
     pass
 
 
-class GatewayTimeout(BaseError):
+class GatewayTimeout(BaseHttpError):
     pass
 
 
-class InsufficientStorage(BaseError):
+class InsufficientStorage(BaseHttpError):
     pass
 
 

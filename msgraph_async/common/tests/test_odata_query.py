@@ -99,9 +99,7 @@ class TestODataQuery(unittest.TestCase):
         constrain1 = Constrain("city", LogicalOperator.NE, "New-York")
         constrain2 = Constrain("displayName", LogicalOperator.EQ, "Noam Meirovitch")
 
-        f = Filter()
-        f.constrains = [constrain1, constrain2]
-        f.logical_connector = LogicalConnector.OR
+        f = Filter([constrain1, constrain2], LogicalConnector.OR)
 
         i.filter = f
 
@@ -112,9 +110,7 @@ class TestODataQuery(unittest.TestCase):
 
         constrain1 = Constrain("city", LogicalOperator.NE, "New-York")
         constrain2 = Constrain("displayName", LogicalOperator.EQ, "Noam Meirovitch")
-        f = Filter()
-        f.constrains = [constrain1, constrain2]
-        f.logical_connector = LogicalConnector.OR
+        f = Filter([constrain1, constrain2], LogicalConnector.OR)
 
         i.count = True
         i.expand = "groups"

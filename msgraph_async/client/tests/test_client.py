@@ -2,7 +2,7 @@ import os
 import json
 import asynctest
 import asyncio
-from datetime import datetime, timedelta
+from aioresponses import aioresponses
 from msgraph_async.client.client import GraphAdminClient
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
@@ -154,7 +154,7 @@ class TestClient(asynctest.TestCase):
                 "created", TestClient._notification_url, SubscriptionResources.Mailbox, minutes_to_expire,
                 token=TestClient._token)
             self.fail("should raise an exception")
-        except GraphClientException:
+        except GraphClientException as e:
             pass
 
     async def test_list_user_mails_bulk_manual_token(self):
@@ -203,6 +203,24 @@ class TestClient(asynctest.TestCase):
 
         self.assertEqual(9, len(mails))
 
+    async def test_list_all_user_mails_filter_mail_address_ne(self):
+        i = self.get_instance()
+
+        q = ODataQuery()
+        q.top = 20
+        start = "2021-02-05T00:00:00.000Z"
+        q.select = ["id", "from", "replyTo", "sentDateTime", "hasAttachments", "receivedDateTime", "subject", "isRead",
+                    "parentFolderId", "sender", "toRecipients", "ccRecipients", "bccRecipients", "internetMessageHeaders"]
+
+        constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
+                      Constrain("sender/emailAddress/address", LogicalOperator.NE, "'test.user@bitdam.com'"),
+                      Constrain("isDraft", LogicalOperator.EQ, "false")]
+        q.filter = Filter(constrains, LogicalConnector.AND)
+
+        mails = []
+        async for mail in i.list_all_user_mails(TestClient._user_id, token=TestClient._token, odata_query=q):
+            mails.append(mail)
+
     async def test_get_mail(self):
         i = self.get_instance()
 
@@ -211,6 +229,35 @@ class TestClient(asynctest.TestCase):
         self.assertEqual(status, HTTPStatus.OK)
         self.assertEqual(dict, type(mail))
         self.assertEqual(TestClient._valid_message_id, mail["id"])
+
+    @aioresponses()
+    async def test_get_mail_simulating_429(self, mocked_res):
+        i = self.get_instance()
+
+        url = "https://graph.microsoft.com/v1.0/users/uid/messages/mid"
+        error_dict = {"error": "maximum bla bla bla"}
+        mocked_res.get(url, status=429, body=json.dumps(error_dict).encode())
+        try:
+            await i.get_mail("uid", "mid", token=TestClient._token)
+            self.fail("should raise an exception")
+        except TooManyRequests as e:
+            self.assertEqual(e.request_url, url)
+            self.assertEqual(e.response_content, error_dict)
+            self.assertIsNotNone(e.response_headers)
+
+    @aioresponses()
+    async def test_get_mail_simulating_500(self, mocked_res):
+        i = self.get_instance()
+
+        url = "https://graph.microsoft.com/v1.0/users/uid/messages/mid"
+        mocked_res.get(url, status=500, headers={"Content-Type": "text/plain"}, body="error".encode())
+        try:
+            await i.get_mail("uid", "mid", token=TestClient._token)
+            self.fail("should raise an exception")
+        except InternalServerError as e:
+            self.assertEqual(e.request_url, url)
+            self.assertEqual(e.response_content, b"error")
+            self.assertIsNotNone(e.response_headers)
 
     async def test_get_mail_as_mime(self):
         i = self.get_instance()
