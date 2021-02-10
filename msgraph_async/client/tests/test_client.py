@@ -240,8 +240,25 @@ class TestClient(asynctest.TestCase):
         try:
             await i.get_mail("uid", "mid", token=TestClient._token)
             self.fail("should raise an exception")
-        except TooManyRequests as e:
+        except BaseHttpError as e:
+            self.assertEqual(e.status, HTTPStatus.TOO_MANY_REQUESTS)
             self.assertEqual(e.request_url, url)
+            self.assertEqual(e.response_content, error_dict)
+            self.assertIsNotNone(e.response_headers)
+
+    @aioresponses()
+    async def test_get_mail_broad_exception_clause(self, mocked_res):
+        i = self.get_instance()
+
+        url = "https://graph.microsoft.com/v1.0/users/uid/messages/mid"
+        error_dict = {"error": "maximum bla bla bla"}
+        mocked_res.get(url, status=429, body=json.dumps(error_dict).encode())
+        try:
+            await i.get_mail("uid", "mid", token=TestClient._token)
+            self.fail("should raise an exception")
+        except (TooManyRequests, InternalServerError, ServiceUnavailable) as e:
+            self.assertEqual(e.request_url, url)
+            self.assertEqual(e.status, HTTPStatus.TOO_MANY_REQUESTS)
             self.assertEqual(e.response_content, error_dict)
             self.assertIsNotNone(e.response_headers)
 
@@ -256,6 +273,7 @@ class TestClient(asynctest.TestCase):
             self.fail("should raise an exception")
         except InternalServerError as e:
             self.assertEqual(e.request_url, url)
+            self.assertEqual(e.status, HTTPStatus.INTERNAL_SERVER_ERROR)
             self.assertEqual(e.response_content, b"error")
             self.assertIsNotNone(e.response_headers)
 

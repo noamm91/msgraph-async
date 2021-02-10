@@ -114,7 +114,7 @@ class GraphAdminClient:
             if status in expected_statuses:
                 return r, status
             else:
-                raise status2exception.get(status, UnknownError)(url, r, resp_headers)
+                raise status2exception.get(status, UnknownError)(status, url, r, resp_headers)
         except Exception as e:
             self._log(logging.ERROR, f"exception while making a request: {str(e)}")
             raise e

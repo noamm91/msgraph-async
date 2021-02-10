@@ -9,11 +9,15 @@ class GraphClientException(Exception):
 
 class BaseHttpError(Exception):
 
-    def __init__(self, request_url, response_content, response_headers):
+    def __init__(self, status, request_url, response_content, response_headers):
         Exception.__init__(self)
+        self.status = status
         self.request_url = request_url
         self.response_content = response_content
         self.response_headers = response_headers
+
+    def __str__(self):
+        return f"request url: {self.request_url}, status: {self.status},  response: {str(self.response_content)}"
 
 
 class UnknownError(BaseHttpError):
