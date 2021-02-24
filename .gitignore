@@ -1,0 +1,9 @@
+venv/*
+*.pyc
+msgraph_async/client/tests/test_credentials
+msgraph_async/client/tests/fake_cert.pem
+build/*
+dist/*
+msgraph_async.egg-info/
+.idea/*
+example.md

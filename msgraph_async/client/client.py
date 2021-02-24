@@ -201,23 +201,22 @@ class GraphAdminClient:
 
     @authorized
     async def create_subscription(
-            self, change_type, notification_url, resource: SubscriptionResources, minutes_to_expiration,
-            client_state=None, latest_supported_tls_version=None, user_id=None, life_cycle_url=None,
-            certificate_path=None, **kwargs):
+            self, change_type: str, notification_url: str, resource: SubscriptionResources, minutes_to_expiration: int,
+            client_state: str = None, latest_supported_tls_version: str = None, user_id: str = None,
+            life_cycle_url: str = None, plain_certificate: str = None, **kwargs):
 
         if not resource.resource_data_included:
             if not user_id:
                 raise GraphClientException(f"user id must be specified with resource '{resource.name}'")
             resource_str = self._get_resource(resource, user_id)
             body = {}
+            url = self._build_url(V1_EP, [(SUBSCRIPTIONS, None)])
         else:
-            if not (life_cycle_url and certificate_path):
-                raise GraphClientException(f"user id must be specified with resource ({resource.name})")
+            if not (life_cycle_url and plain_certificate):
+                raise GraphClientException(f"life cycle url and certificate must be specified with resource ({resource.name})")
             resource_str = resource.value
 
-            with open(certificate_path) as f:
-                certificate = f.read()
-                b64_certificate = b64encode(certificate.encode()).decode()
+            b64_certificate = b64encode(plain_certificate.encode()).decode()
 
             body = {
                 "includeResourceData": True,
@@ -225,10 +224,10 @@ class GraphAdminClient:
                 "encryptionCertificate": b64_certificate,
                 "encryptionCertificateId": "CertificateId"
             }
+            url = self._build_url(BETA_EP, [(SUBSCRIPTIONS, None)])
 
         expiration_date_time = self._get_msgraph_time_format(minutes_to_expiration)
 
-        url = self._build_url(V1_EP, [(SUBSCRIPTIONS, None)])
         body.update({
             "changeType": change_type,
             "notificationUrl": notification_url,
@@ -246,8 +245,13 @@ class GraphAdminClient:
         return res, status
 
     @authorized
-    async def renew_subscription(self, subscription_id: str, minutes_to_expiration: int, **kwargs):
-        url = self._build_url(V1_EP, [(SUBSCRIPTIONS, subscription_id)])
+    async def renew_subscription(self, subscription_id: str, resource: SubscriptionResources,
+                                 minutes_to_expiration: int, **kwargs):
+        if not resource.resource_data_included:
+            url = self._build_url(V1_EP, [(SUBSCRIPTIONS, subscription_id)])
+        else:
+            url = self._build_url(BETA_EP, [(SUBSCRIPTIONS, subscription_id)])
+
         expiration_date_time = self._get_msgraph_time_format(minutes_to_expiration)
         body = {
             "expirationDateTime": expiration_date_time
@@ -258,8 +262,12 @@ class GraphAdminClient:
         return res, status
 
     @authorized
-    async def delete_subscription(self, subscription_id: str, **kwargs):
-        url = self._build_url(V1_EP, [(SUBSCRIPTIONS, subscription_id)])
+    async def delete_subscription(self, subscription_id: str, resource: SubscriptionResources, **kwargs):
+        if not resource.resource_data_included:
+            url = self._build_url(V1_EP, [(SUBSCRIPTIONS, subscription_id)])
+        else:
+            url = self._build_url(BETA_EP, [(SUBSCRIPTIONS, subscription_id)])
+
         res, status = await self._request(
             "DELETE", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
         return res, status

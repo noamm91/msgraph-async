@@ -14,12 +14,15 @@ class TestClient(asynctest.TestCase):
     _test_app_id = None
     _test_app_secret = None
     _test_tenant_id = None
+    resource_data_in_subscription_app_id = None
+    resource_data_in_subscription_app_secret = None
     _token = None
     _user_id = None
     _total_users_count = None
     _bulk_size = None
     _notification_url = None
     _valid_message_id = None
+    _token_subscription_with_resource_data = None
 
     def setUp(self):
         pass
@@ -36,6 +39,8 @@ class TestClient(asynctest.TestCase):
         cls._user_id = details["user_id"]
         cls._notification_url = details["notification_url"]
         cls._valid_message_id = details["valid_message_id"]
+        cls._resource_data_in_subscription_app_id = details["resource_data_in_subscription_app_id"]
+        cls._resource_data_in_subscription_app_secret = details["resource_data_in_subscription_app_secret"]
         cls._total_users_count = 25
         cls._bulk_size = 10
 
@@ -51,7 +56,20 @@ class TestClient(asynctest.TestCase):
         res_json = r.json()
         cls._token = res_json['access_token']
 
-    def get_instance(self):
+        token_params = {
+            'grant_type': 'client_credentials',
+            "scope": "https://graph.microsoft.com/.default",
+            'client_id': cls._resource_data_in_subscription_app_id,
+            'client_secret': cls._resource_data_in_subscription_app_secret,
+        }
+
+        r = requests.post(f"https://login.microsoftonline.com/{cls._test_tenant_id}/oauth2/v2.0/token",
+                          data=token_params)
+        res_json = r.json()
+        cls._token_subscription_with_resource_data = res_json['access_token']
+
+    @staticmethod
+    def get_instance():
         return GraphAdminClient(enable_logging=True)
 
     async def test_list_users_bulk_manual_token_with_top(self):
@@ -136,13 +154,51 @@ class TestClient(asynctest.TestCase):
         await asyncio.sleep(2)
 
         minutes_to_expire = 15
-        res, status = await i.renew_subscription(subscription_id, minutes_to_expire, token=TestClient._token)
+        res, status = await i.renew_subscription(subscription_id, SubscriptionResources.Mailbox, minutes_to_expire,
+                                                 token=TestClient._token)
 
         self.assertEqual(status, HTTPStatus.OK)
 
         await asyncio.sleep(2)
 
-        res, status = await i.delete_subscription(subscription_id, token=TestClient._token)
+        res, status = await i.delete_subscription(subscription_id, SubscriptionResources.Mailbox,
+                                                  token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.NO_CONTENT)
+
+    async def test_tenant_channels_subscription_lifecycle(self):
+        i = self.get_instance()
+
+        with open("fake_cert.pem") as f:
+            certificate = f.read()
+
+        life_cycle_checks = "https://mila.bitdam.com/api/v1.0/office365/teams/life_cycle_check"
+
+        minutes_to_expire = 3
+        res, status = await i.create_subscription(
+            "created,updated,deleted", TestClient._notification_url, SubscriptionResources.TenantTeamsChannels,
+            minutes_to_expire, life_cycle_url=life_cycle_checks, plain_certificate=certificate,
+            token=TestClient._token_subscription_with_resource_data)
+
+        subscription_id = res.get("id")
+        self.assertIsNotNone(subscription_id)
+
+        self.assertEqual(status, HTTPStatus.CREATED)
+
+        await asyncio.sleep(2)
+
+        minutes_to_expire = 3
+        res, status = await i.renew_subscription(
+            subscription_id, SubscriptionResources.TenantTeamsChannels, minutes_to_expire,
+            token=TestClient._token_subscription_with_resource_data)
+
+        self.assertEqual(status, HTTPStatus.OK)
+
+        await asyncio.sleep(2)
+
+        res, status = await i.delete_subscription(
+            subscription_id, SubscriptionResources.TenantTeamsChannels,
+            token=TestClient._token_subscription_with_resource_data)
 
         self.assertEqual(status, HTTPStatus.NO_CONTENT)
 
@@ -208,7 +264,7 @@ class TestClient(asynctest.TestCase):
 
         q = ODataQuery()
         q.top = 20
-        start = "2021-02-05T00:00:00.000Z"
+        start = "2021-02-20T00:00:00.000Z"
         q.select = ["id", "from", "replyTo", "sentDateTime", "hasAttachments", "receivedDateTime", "subject", "isRead",
                     "parentFolderId", "sender", "toRecipients", "ccRecipients", "bccRecipients", "internetMessageHeaders"]
 
