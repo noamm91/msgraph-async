@@ -18,6 +18,8 @@ class TestClient(asynctest.TestCase):
     resource_data_in_subscription_app_secret = None
     _token = None
     _user_id = None
+    _site_id = None
+    _group_id = None
     _total_users_count = None
     _bulk_size = None
     _notification_url = None
@@ -37,6 +39,8 @@ class TestClient(asynctest.TestCase):
         cls._test_app_secret = details["app_secret"]
         cls._test_tenant_id = details["tenant_id"]
         cls._user_id = details["user_id"]
+        cls._site_id = details["site_id"]
+        cls._group_id = details["group_id"]
         cls._notification_url = details["notification_url"]
         cls._valid_message_id = details["valid_message_id"]
         cls._resource_data_in_subscription_app_id = details["resource_data_in_subscription_app_id"]
@@ -264,7 +268,7 @@ class TestClient(asynctest.TestCase):
 
         q = ODataQuery()
         q.top = 20
-        start = "2021-02-20T00:00:00.000Z"
+        start = "2021-03-01T00:00:00.000Z"
         q.select = ["id", "from", "replyTo", "sentDateTime", "hasAttachments", "receivedDateTime", "subject", "isRead",
                     "parentFolderId", "sender", "toRecipients", "ccRecipients", "bccRecipients", "internetMessageHeaders"]
 
@@ -341,3 +345,41 @@ class TestClient(asynctest.TestCase):
 
         self.assertEqual(status, HTTPStatus.OK)
         self.assertEqual(bytes, type(mail))
+
+    async def test_get_latest_delta_url_user_drive(self):
+        i = self.get_instance()
+
+        delta_url = await i.get_latest_delta_link(USERS, TestClient._user_id, token=TestClient._token)
+
+        self.assertIsNotNone(delta_url)
+
+    async def test_get_latest_delta_url_site_drive(self):
+        i = self.get_instance()
+
+        delta_url = await i.get_latest_delta_link(SITES, TestClient._site_id, token=TestClient._token)
+
+        self.assertIsNotNone(delta_url)
+
+    async def test_get_latest_delta_url_group_drive(self):
+        i = self.get_instance()
+
+        delta_url = await i.get_latest_delta_link(GROUPS, TestClient._group_id, token=TestClient._token)
+
+        self.assertIsNotNone(delta_url)
+
+    async def test_list_some_user_drive_content_using_iterator(self):
+        i = self.get_instance()
+
+        delta_url = await i.get_latest_delta_link(USERS, TestClient._user_id, token=TestClient._token)
+
+        items = []
+        async for drive_item in i.list_drive_changes(delta_url, token=TestClient._token):
+            if type(drive_item) == dict:
+                items.append(drive_item)
+
+# Notes
+"""
+one drive delta url example (id is user id): https://graph.microsoft.com/v1.0/users/{969185c5-1335-4000-9e3a-9f340ff671b2}/drive/root/delta   
+sharepoint delta url example (id is site id):  "https://graph.microsoft.com/v1.0/sites/{essentiawater-my.sharepoint.com,8d62bfef-b935-4f7d-9cc9-a2ef5eda0a40,a446e420-a98a-499a-801a-ca2cda945c9b}/drive/root/delta"
+groups drive delta url example (id is group id): "https://graph.microsoft.com/v1.0/groups/{c2b5bec7-bf16-40cf-a6f7-957cfb17c388}/drive/root/delta"
+"""

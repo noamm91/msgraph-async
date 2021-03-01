@@ -14,9 +14,15 @@ SEARCH = "search"
 USERS = "/users"
 SUBSCRIPTIONS = "/subscriptions"
 MAILS = "/messages"
+GROUPS = "/groups"
+SITES = "/sites"
+DRIVE = "/drive"
 
 # next_key
 NEXT_KEY = "@odata.nextLink"
+
+# delta_key
+DELTA_KEY = "@odata.deltaLink"
 
 
 # Subscription Resources

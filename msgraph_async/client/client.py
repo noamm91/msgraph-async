@@ -309,3 +309,57 @@ class GraphAdminClient:
     @authorized
     async def move_mail(self):
         pass
+
+    @authorized
+    async def list_drive_changes(self, state_link: str, **kwargs):
+        """
+
+        :param state_link: deltaLink or nextLink, returned from previous calls
+        :return: list of drive items changes since state_link was issued
+        """
+        res, status = await self._request("GET", state_link, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        next_url = res.get(NEXT_KEY)
+        delta_url = res.get(DELTA_KEY)
+        for drive_item in res["value"]:
+            yield drive_item
+        while next_url:
+            res, status = await self.list_drive_changes(next_url, **kwargs)
+            next_url = res.get(NEXT_KEY)
+            delta_url = res.get(DELTA_KEY)
+            for drive_item in res["value"]:
+                yield drive_item
+        if not delta_url:
+            raise GraphClientException("missing deltaLink after iterating through all drive items")
+        yield delta_url
+
+    @authorized
+    async def get_latest_delta_link(self, resource, id: str, **kwargs) -> str:
+        """
+
+        :param resource:
+        :param id:
+        :param kwargs:
+        :return:
+        """
+        supported_drive_resources = [USERS, SITES, GROUPS]
+        if resource not in supported_drive_resources:
+            raise GraphClientException(
+                f"getting delta url only available for the resources: {supported_drive_resources}")
+        drive_delta_url = self._build_url(V1_EP, [(resource, id), (DRIVE, None), ("/root", None)]) + "/delta?token=latest"
+
+        last_value = None
+        async for value in self.list_drive_changes(drive_delta_url, **kwargs):
+            last_value = value
+        return last_value
+
+    @authorized
+    async def get_drive_file(self, resource, id: str, drive_item_id: str, **kwargs):
+        supported_drive_resources = [USERS, SITES, GROUPS]
+        if resource not in supported_drive_resources:
+            raise GraphClientException(
+                f"getting drive file only available for the resources: {supported_drive_resources}")
+        url = self._build_url(V1_EP, [(resource, id), (DRIVE, None), ("/items", drive_item_id), ("/content", None)])
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
