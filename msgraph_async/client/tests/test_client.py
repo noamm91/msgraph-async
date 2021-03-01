@@ -402,10 +402,3 @@ class TestClient(asynctest.TestCase):
         async for drive_item in i.list_drive_changes(delta_url, token=TestClient._token):
             if type(drive_item) == dict:
                 items.append(drive_item)
-
-# Notes
-"""
-one drive delta url example (id is user id): https://graph.microsoft.com/v1.0/users/{969185c5-1335-4000-9e3a-9f340ff671b2}/drive/root/delta   
-sharepoint delta url example (id is site id):  "https://graph.microsoft.com/v1.0/sites/{essentiawater-my.sharepoint.com,8d62bfef-b935-4f7d-9cc9-a2ef5eda0a40,a446e420-a98a-499a-801a-ca2cda945c9b}/drive/root/delta"
-groups drive delta url example (id is group id): "https://graph.microsoft.com/v1.0/groups/{c2b5bec7-bf16-40cf-a6f7-957cfb17c388}/drive/root/delta"
-"""
