@@ -354,7 +354,7 @@ class GraphAdminClient:
         return last_value
 
     @authorized
-    async def get_drive_file(self, resource, id: str, drive_item_id: str, **kwargs):
+    async def get_drive_item_content(self, resource, id: str, drive_item_id: str, **kwargs):
         supported_drive_resources = [USERS, SITES, GROUPS]
         if resource not in supported_drive_resources:
             raise GraphClientException(

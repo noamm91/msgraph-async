@@ -13,6 +13,8 @@ import requests
 class TestClient(asynctest.TestCase):
     _test_app_id = None
     _test_app_secret = None
+    _one_drive_app_id = None
+    _one_drive_app_secret = None
     _test_tenant_id = None
     resource_data_in_subscription_app_id = None
     resource_data_in_subscription_app_secret = None
@@ -25,6 +27,7 @@ class TestClient(asynctest.TestCase):
     _notification_url = None
     _valid_message_id = None
     _token_subscription_with_resource_data = None
+    _one_drive_token = None
 
     def setUp(self):
         pass
@@ -37,6 +40,8 @@ class TestClient(asynctest.TestCase):
 
         cls._test_app_id = details["app_id"]
         cls._test_app_secret = details["app_secret"]
+        cls._one_drive_app_id = details["drive_permissions_app_id"]
+        cls._one_drive_app_secret = details["drive_permissions_app_secret"]
         cls._test_tenant_id = details["tenant_id"]
         cls._user_id = details["user_id"]
         cls._site_id = details["site_id"]
@@ -71,6 +76,18 @@ class TestClient(asynctest.TestCase):
                           data=token_params)
         res_json = r.json()
         cls._token_subscription_with_resource_data = res_json['access_token']
+
+        token_params = {
+            'grant_type': 'client_credentials',
+            "scope": "https://graph.microsoft.com/.default",
+            'client_id': cls._one_drive_app_id,
+            'client_secret': cls._one_drive_app_secret,
+        }
+
+        r = requests.post(f"https://login.microsoftonline.com/{cls._test_tenant_id}/oauth2/v2.0/token",
+                          data=token_params)
+        res_json = r.json()
+        cls._one_drive_token = res_json['access_token']
 
     @staticmethod
     def get_instance():
@@ -366,6 +383,15 @@ class TestClient(asynctest.TestCase):
         delta_url = await i.get_latest_delta_link(GROUPS, TestClient._group_id, token=TestClient._token)
 
         self.assertIsNotNone(delta_url)
+
+    async def test_get_drive_file_content(self):
+        i = self.get_instance()
+
+        drive_item_content, status = await i.get_drive_item_content(
+            USERS, TestClient._user_id, "01VYUN2XVST2VSAZWTPVCI4ZBCTSBTMRRW", token=TestClient._one_drive_token)
+
+        self.assertIsNotNone(drive_item_content)
+        self.assertEqual(type(drive_item_content), bytes)
 
     async def test_list_some_user_drive_content_using_iterator(self):
         i = self.get_instance()
