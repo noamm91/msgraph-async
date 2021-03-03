@@ -402,3 +402,35 @@ class TestClient(asynctest.TestCase):
         async for drive_item in i.list_drive_changes(delta_url, token=TestClient._token):
             if type(drive_item) == dict:
                 items.append(drive_item)
+
+    async def test_get_sites(self):
+        i = self.get_instance()
+        odata = ODataQuery()
+        odata.top = 10
+        sites = []
+        async for site in i.list_all_sites(
+                token=TestClient._token_subscription_with_resource_data, odata_query=odata):
+            sites.append(site)
+        self.assertIsNotNone(sites)
+
+    async def test_get_sites_bulk(self):
+        i = self.get_instance()
+        odata = ODataQuery()
+        odata.top = 2
+        res, stauts = await i.list_sites_bulk(token=TestClient._token_subscription_with_resource_data, odata_query=odata)
+        self.assertEqual(stauts, HTTPStatus.OK)
+        self.assertEqual(len(res["value"]), 2)
+
+    async def test_get_sites_bulk_and_then_list_more(self):
+        i = self.get_instance()
+        odata = ODataQuery()
+        odata.top = 2
+        res, stauts = await i.list_sites_bulk(token=TestClient._token_subscription_with_resource_data, odata_query=odata)
+        self.assertEqual(stauts, HTTPStatus.OK)
+        self.assertEqual(len(res["value"]), 2)
+
+        res, stauts = await i.list_more_sites(
+            next_url=res[NEXT_KEY], token=TestClient._token_subscription_with_resource_data, odata_query=odata)
+
+        self.assertEqual(stauts, HTTPStatus.OK)
+        self.assertEqual(len(res["value"]), 2)

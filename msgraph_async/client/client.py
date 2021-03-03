@@ -363,3 +363,28 @@ class GraphAdminClient:
         res, status = await self._request("GET", url, kwargs["_req_headers"],
                                           expected_statuses=kwargs.get("expected_statuses"))
         return res, status
+
+    @authorized
+    async def list_sites_bulk(self, **kwargs):
+        url = self._build_url(V1_EP, [(SITES, None)], **kwargs)
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def list_more_sites(self, next_url, **kwargs):
+        res, status = await self._request("GET", next_url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def list_all_sites(self, **kwargs):
+        res, status = await self.list_sites_bulk(**kwargs)
+        next_url = res.get(NEXT_KEY)
+        for site in res["value"]:
+            yield site
+        while next_url:
+            res, status = await self.list_more_sites(next_url, **kwargs)
+            next_url = res.get(NEXT_KEY)
+            for site in res["value"]:
+                yield site
