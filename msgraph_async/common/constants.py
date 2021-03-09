@@ -17,6 +17,8 @@ MAILS = "/messages"
 GROUPS = "/groups"
 SITES = "/sites"
 DRIVE = "/drive"
+TEAMS = "/teams"
+CHANNELS = "/channels"
 
 # next_key
 NEXT_KEY = "@odata.nextLink"

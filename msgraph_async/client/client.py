@@ -182,19 +182,19 @@ class GraphAdminClient:
         return res, status
 
     @authorized
-    async def list_more_users(self, next_url, **kwargs):
+    async def list_more(self, next_url, **kwargs):
         res, status = await self._request("GET", next_url, kwargs["_req_headers"],
                                           expected_statuses=kwargs.get("expected_statuses"))
         return res, status
 
     @authorized
-    async def list_all_users(self, **kwargs):
+    async def list_all_users(self, **kwargs) -> typing.AsyncGenerator[dict, None]:
         res, status = await self.list_users_bulk(**kwargs)
         next_url = res.get(NEXT_KEY)
         for user in res["value"]:
             yield user
         while next_url:
-            res, status = await self.list_more_users(next_url, **kwargs)
+            res, status = await self.list_more(next_url, **kwargs)
             next_url = res.get(NEXT_KEY)
             for user in res["value"]:
                 yield user
@@ -280,19 +280,13 @@ class GraphAdminClient:
         return res, status
 
     @authorized
-    async def list_more_user_mails(self, next_url, **kwargs):
-        res, status = await self._request("GET", next_url, kwargs["_req_headers"],
-                                          expected_statuses=kwargs.get("expected_statuses"))
-        return res, status
-
-    @authorized
-    async def list_all_user_mails(self, user_id, **kwargs):
+    async def list_all_user_mails(self, user_id, **kwargs) -> typing.AsyncGenerator[dict, None]:
         res, status = await self.list_user_mails_bulk(user_id, **kwargs)
         next_url = res.get(NEXT_KEY)
         for mail in res["value"]:
             yield mail
         while next_url:
-            res, status = await self.list_more_user_mails(next_url, **kwargs)
+            res, status = await self.list_more(next_url, **kwargs)
             next_url = res.get(NEXT_KEY)
             for mail in res["value"]:
                 yield mail
@@ -372,19 +366,58 @@ class GraphAdminClient:
         return res, status
 
     @authorized
-    async def list_more_sites(self, next_url, **kwargs):
-        res, status = await self._request("GET", next_url, kwargs["_req_headers"],
-                                          expected_statuses=kwargs.get("expected_statuses"))
-        return res, status
-
-    @authorized
-    async def list_all_sites(self, **kwargs):
+    async def list_all_sites(self, **kwargs) -> typing.AsyncGenerator[dict, None]:
         res, status = await self.list_sites_bulk(**kwargs)
         next_url = res.get(NEXT_KEY)
         for site in res["value"]:
             yield site
         while next_url:
-            res, status = await self.list_more_sites(next_url, **kwargs)
+            res, status = await self.list_more(next_url, **kwargs)
             next_url = res.get(NEXT_KEY)
             for site in res["value"]:
                 yield site
+
+    @authorized
+    async def list_groups_bulk(self, **kwargs):
+        url = self._build_url(V1_EP, [(GROUPS, None)], **kwargs)
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def list_all_groups(self, **kwargs) -> typing.AsyncGenerator[dict, None]:
+        res, status = await self.list_groups_bulk(**kwargs)
+        next_url = res.get(NEXT_KEY)
+        for group in res["value"]:
+            yield group
+        while next_url:
+            res, status = await self.list_more(next_url, **kwargs)
+            next_url = res.get(NEXT_KEY)
+            for group in res["value"]:
+                yield group
+
+    @authorized
+    async def get_site(self, site_id, **kwargs):
+        url = self._build_url(V1_EP, [(SITES, site_id)], **kwargs)
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def get_group(self, group_id, **kwargs):
+        url = self._build_url(V1_EP, [(GROUPS, group_id)], **kwargs)
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def get_team(self, team_id, **kwargs):
+        url = self._build_url(V1_EP, [(TEAMS, team_id)], **kwargs)
+        return await self._request("GET", url, kwargs["_req_headers"],
+                                   expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def get_channel(self, team_id, channel_id, **kwargs):
+        url = self._build_url(V1_EP, [(TEAMS, team_id), (CHANNELS, channel_id)], **kwargs)
+        return await self._request("GET", url, kwargs["_req_headers"],
+                                   expected_statuses=kwargs.get("expected_statuses"))

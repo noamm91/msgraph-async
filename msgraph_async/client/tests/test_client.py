@@ -22,6 +22,8 @@ class TestClient(asynctest.TestCase):
     _user_id = None
     _site_id = None
     _group_id = None
+    _team_id = None
+    _channel_id = None
     _total_users_count = None
     _bulk_size = None
     _notification_url = None
@@ -46,6 +48,8 @@ class TestClient(asynctest.TestCase):
         cls._user_id = details["user_id"]
         cls._site_id = details["site_id"]
         cls._group_id = details["group_id"]
+        cls._team_id = details["team_id"]
+        cls._channel_id = details["channel_id"]
         cls._notification_url = details["notification_url"]
         cls._valid_message_id = details["valid_message_id"]
         cls._resource_data_in_subscription_app_id = details["resource_data_in_subscription_app_id"]
@@ -259,7 +263,7 @@ class TestClient(asynctest.TestCase):
         if not next:
             self.fail("should have next..")
 
-        res, status = await i.list_more_user_mails(next, token=TestClient._token)
+        res, status = await i.list_more(next, token=TestClient._token)
 
         self.assertEqual(status, HTTPStatus.OK)
 
@@ -429,8 +433,61 @@ class TestClient(asynctest.TestCase):
         self.assertEqual(stauts, HTTPStatus.OK)
         self.assertEqual(len(res["value"]), 2)
 
-        res, stauts = await i.list_more_sites(
+        res, stauts = await i.list_more(
             next_url=res[NEXT_KEY], token=TestClient._token_subscription_with_resource_data, odata_query=odata)
 
         self.assertEqual(stauts, HTTPStatus.OK)
         self.assertEqual(len(res["value"]), 2)
+
+    async def test_get_groups_bulk(self):
+        i = self.get_instance()
+        odata = ODataQuery()
+        odata.top = 2
+        res, stauts = await i.list_groups_bulk(token=TestClient._token_subscription_with_resource_data, odata_query=odata)
+        self.assertEqual(stauts, HTTPStatus.OK)
+        self.assertEqual(len(res["value"]), 2)
+
+        res, stauts = await i.list_more(
+            next_url=res[NEXT_KEY], token=TestClient._token_subscription_with_resource_data, odata_query=odata)
+
+        self.assertEqual(stauts, HTTPStatus.OK)
+        self.assertEqual(len(res["value"]), 2)
+
+    async def test_list_all_groups(self):
+        i = self.get_instance()
+
+        groups_counter = 0
+        async for _ in i.list_all_groups(token=TestClient._token_subscription_with_resource_data):
+            groups_counter += 1
+
+        self.assertTrue(groups_counter > 0)
+
+    async def test_get_site(self):
+        i = self.get_instance()
+
+        res, status = await i.get_site(self._site_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertEqual(res["id"], self._site_id)
+
+    async def test_get_group(self):
+        i = self.get_instance()
+
+        res, status = await i.get_group(self._group_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertEqual(res["id"], self._group_id)
+
+    async def test_get_team(self):
+        i = self.get_instance()
+        res, status = await i.get_team(TestClient._team_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertEqual(res["id"], TestClient._team_id)
+
+    async def test_get_channel(self):
+        i = self.get_instance()
+        res, status = await i.get_channel(TestClient._team_id, TestClient._channel_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertEqual(res["id"], TestClient._channel_id)
