@@ -318,7 +318,7 @@ class GraphAdminClient:
         for drive_item in res["value"]:
             yield drive_item
         while next_url:
-            res, status = await self.list_drive_changes(next_url, **kwargs)
+            res, status = await self.list_more(next_url, **kwargs)
             next_url = res.get(NEXT_KEY)
             delta_url = res.get(DELTA_KEY)
             for drive_item in res["value"]:
