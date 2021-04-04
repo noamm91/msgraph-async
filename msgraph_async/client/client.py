@@ -32,7 +32,7 @@ def authorized(func):
 class GraphAdminClient:
 
     def __init__(self, enable_logging=False):
-        self._session = aiohttp.ClientSession()
+        self._session = None
         self._token = None
         self._managed = False
         self._token_refresh_interval_sec = 3300
@@ -100,6 +100,8 @@ class GraphAdminClient:
         self._log(logging.INFO, "token has been refreshed")
 
     async def _request(self, method, url, headers: dict = None, data: dict = None, expected_statuses=None):
+        if not self._session:
+            self._session = aiohttp.ClientSession()
         if not expected_statuses:
             expected_statuses = (HTTPStatus.OK, HTTPStatus.NO_CONTENT, HTTPStatus.CREATED)
         try:
@@ -298,6 +300,77 @@ class GraphAdminClient:
         url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id)], **kwargs)
         res, status = await self._request("GET", url, kwargs["_req_headers"],
                                           expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def send_mail(self, mail: dict, headers: dict = None, attachments: dict = None, **kwargs):
+        """
+        Send an email
+        :param mail: A dictionary containing the attributes about the email. from, to, and body_content are required.
+        subject, cc, bcc, body_type, and save_to_sent_items. cc and bcc are lists of string emails like to.
+        :param attachments: A list of dictionaries, each requiring name, contentType, and contentBytes as a
+        base64 string
+        :param headers: A dictionary of mail headers to be converted to microsoft.graph.internetMessageHeader
+        :return: None if the operation was successful, else - raises GraphClientException with info
+        """
+
+        if 'from' not in mail:
+            raise GraphClientException("mail dict must contain a 'from' email address string.")
+
+        if 'to' not in mail:
+            raise GraphClientException("mail dict must contain a 'to' list of email address strings.")
+
+        if 'body_content' not in mail:
+            raise GraphClientException("mail dict must contain a 'body_content' string.")
+
+        if 'subject' not in mail:
+            mail['subject'] = ""
+        if 'body_type' not in mail:
+            mail['body_type'] = "Text"
+
+        message = {
+            "message": {
+                "subject": mail['subject'],
+                "body": {
+                    "contentType": mail['body_type'],
+                    "content": mail['body_content']
+                },
+                "toRecipients": [{"emailAddress": {"address": item}} for item in mail['to']]
+            }
+        }
+
+        if 'cc' in mail:
+            message['message']['ccRecipients'] = [{"emailAddress": {"address": item}} for item in mail['cc']]
+
+        if 'bcc' in mail:
+            message['message']['bccRecipients'] = [{"emailAddress": {"address": item}} for item in mail['bcc']]
+
+        if 'save_to_sent_items' in mail:
+            message["saveToSentItems"] = mail['save_to_sent_items']
+
+        if headers:
+            if len(headers) > 5:
+                raise GraphClientException(
+                    f"Too many custom headers ({len(headers)}). Maximum number of headers in one message should be less than or equal to 5.")
+
+            message['message']["internetMessageHeaders"] = []
+            for (name, value) in headers.items():
+                header = {"value": value}
+                if "x-" in name.lower():
+                    header['name'] = name
+                else:
+                    header['name'] = "x-" + name
+                message['message']["internetMessageHeaders"].append(header)
+
+        if attachments:
+            for attachment in attachments:
+                attachment['@odata.type'] = "#microsoft.graph.fileAttachment"
+            message["message"]["attachments"] = attachments
+
+        url = self._build_url(V1_EP, [(USERS, mail['from']), (SENDMAIL, None)], **kwargs)
+        res, status = await self._request("POST", url, kwargs["_req_headers"],
+                                          data=json.dumps(message),
+                                          expected_statuses=(HTTPStatus.ACCEPTED,))
         return res, status
 
     @authorized
