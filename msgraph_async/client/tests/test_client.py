@@ -30,6 +30,10 @@ class TestClient(asynctest.TestCase):
     _valid_message_id = None
     _token_subscription_with_resource_data = None
     _one_drive_token = None
+    _mail_start_time = None
+    _mail_end_time = None
+    _mail_to_users = None
+    _mail_from_user = None
 
     def setUp(self):
         pass
