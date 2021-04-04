@@ -50,10 +50,15 @@ class TestClient(asynctest.TestCase):
         cls._group_id = details["group_id"]
         cls._team_id = details["team_id"]
         cls._channel_id = details["channel_id"]
+        cls._one_drive_file_id = details["one_drive_file_id"]
         cls._notification_url = details["notification_url"]
         cls._valid_message_id = details["valid_message_id"]
         cls._resource_data_in_subscription_app_id = details["resource_data_in_subscription_app_id"]
         cls._resource_data_in_subscription_app_secret = details["resource_data_in_subscription_app_secret"]
+        cls._mail_start_time = details["mail_start_time"]
+        cls._mail_end_time = details["mail_end_time"]
+        cls._mail_to_users = details["mail_to_users"]
+        cls._mail_from_user = details["mail_from_user"]
         cls._total_users_count = 25
         cls._bulk_size = 10
 
@@ -250,8 +255,8 @@ class TestClient(asynctest.TestCase):
 
         q = ODataQuery()
         q.top = 6
-        start = "2021-01-01T00:00:00.000Z"
-        end = "2021-01-02T00:00:00.000Z"
+        start = TestClient._mail_start_time
+        end = TestClient._mail_end_time
         constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
                       Constrain("receivedDateTime", LogicalOperator.LT, end)]
         q.filter = Filter(constrains, LogicalConnector.AND)
@@ -272,8 +277,8 @@ class TestClient(asynctest.TestCase):
 
         q = ODataQuery()
         q.top = 6
-        start = "2021-01-01T00:00:00.000Z"
-        end = "2021-01-02T00:00:00.000Z"
+        start = TestClient._mail_start_time
+        end = TestClient._mail_end_time
         constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
                       Constrain("receivedDateTime", LogicalOperator.LT, end)]
         q.filter = Filter(constrains, LogicalConnector.AND)
@@ -367,6 +372,72 @@ class TestClient(asynctest.TestCase):
         self.assertEqual(status, HTTPStatus.OK)
         self.assertEqual(bytes, type(mail))
 
+    async def test_send_mail_basic_exceptions(self):
+        i = self.get_instance()
+        mail = {}
+        headers = {}
+        attachments = {}
+        try:
+            _, status = await i.send_mail(
+                mail, headers=headers, attachments=attachments, token=TestClient._token)
+        except GraphClientException as e:
+            self.assertIn("must contain a 'from' email address", e.message)
+
+        mail['from'] = TestClient._mail_from_user
+        try:
+            _, status = await i.send_mail(
+                mail, headers=headers, attachments=attachments, token=TestClient._token)
+        except GraphClientException as e:
+            self.assertIn("must contain a 'to' list of email", e.message)
+
+        mail['to'] = TestClient._mail_to_users
+        try:
+            _, status = await i.send_mail(
+                mail, headers=headers, attachments=attachments, token=TestClient._token)
+        except GraphClientException as e:
+            self.assertIn("dict must contain a 'body_content' string", e.message)
+
+        mail['body_content'] = "Test email!"
+        headers = {
+            'header-one': 'value',
+            'header-two': 'value',
+            'header-three': 'value',
+            'header-four': 'value',
+            'header-five': 'value',
+            'header-six': 'value'
+        }
+        try:
+            _, status = await i.send_mail(
+                mail, headers=headers, attachments=attachments, token=TestClient._token)
+        except GraphClientException as e:
+            self.assertIn("should be less than or equal to 5", e.message)
+
+        headers.pop('header-six')
+        _, status = await i.send_mail(mail, headers=headers, attachments=attachments, token=TestClient._token)
+        self.assertEqual(status, HTTPStatus.ACCEPTED)
+
+    async def test_send_mail_with_headers_and_attachment(self):
+        i = self.get_instance()
+        mail = {
+            'to': TestClient._mail_to_users,
+            'from': TestClient._mail_from_user,
+            'body_content': "<bold>An HTML email!</bold>",
+            'body_type': "HTML",
+            "save_to_sent_items": True
+        }
+        headers = {
+            'Custom-Header': 'Custom-Value'
+        }
+        attachments = [{
+            'name': "test.txt",
+            'contentType': "plain/text",
+            'contentBytes': "QSB0ZXN0IGZpbGUgZ29lcyBoZXJlIQ=="
+        }]
+        _, status = await i.send_mail(
+                mail, headers=headers, attachments=attachments, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.ACCEPTED)
+
     async def test_get_latest_delta_url_user_drive(self):
         i = self.get_instance()
 
@@ -392,7 +463,7 @@ class TestClient(asynctest.TestCase):
         i = self.get_instance()
 
         drive_item_content, status = await i.get_drive_item_content(
-            USERS, TestClient._user_id, "01VYUN2XVST2VSAZWTPVCI4ZBCTSBTMRRW", token=TestClient._one_drive_token)
+            USERS, TestClient._user_id, TestClient._one_drive_file_id, token=TestClient._one_drive_token)
 
         self.assertIsNotNone(drive_item_content)
         self.assertEqual(type(drive_item_content), bytes)
