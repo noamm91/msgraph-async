@@ -2,6 +2,7 @@ This is a client for Microsoft Graph API
 
 The client currently supports the following Graph API:
 * Acquiring access token
+* Generating authorization url for admin consent
 * Users basic operations (list/get)
 * Subscriptions operations (create/renew/delete, also for chat resources)
 * Mails operations (list/get/send)
