@@ -2,12 +2,14 @@ import os
 import json
 import asynctest
 import asyncio
+import requests
+import urllib
+import urllib.parse
 from aioresponses import aioresponses
 from msgraph_async.client.client import GraphAdminClient
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
 from msgraph_async.common.odata_query import *
-import requests
 
 
 class TestClient(asynctest.TestCase):
@@ -34,6 +36,7 @@ class TestClient(asynctest.TestCase):
     _mail_end_time = None
     _mail_to_users = None
     _mail_from_user = None
+    _one_drive_file_id = None
 
     def setUp(self):
         pass
@@ -566,3 +569,18 @@ class TestClient(asynctest.TestCase):
 
         self.assertEqual(HTTPStatus.OK, status)
         self.assertEqual(res["id"], TestClient._channel_id)
+
+    def test_generate_authorization_url(self):
+        i = self.get_instance()
+
+        redirect_url = "https://redirect-here.com/a/b"
+        state = {"foo": "bla"}
+
+        auth_url = i.generate_authorization_url(TestClient._test_app_id, redirect_url, state)
+        parts = list(urllib.parse.urlparse(auth_url))
+        self.assertEqual(parts[0], "https")
+        self.assertEqual(parts[1], "login.microsoftonline.com")
+        self.assertEqual(parts[2], "/common/adminconsent")
+        query_params = urllib.parse.unquote_plus(parts[4])
+        self.assertTrue('redirect_uri=https://redirect-here.com/a/b' in query_params)
+        self.assertTrue('&state={"foo": "bla"}' in query_params)

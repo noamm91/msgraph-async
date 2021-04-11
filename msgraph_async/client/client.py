@@ -1,4 +1,6 @@
 import typing
+import urllib
+import urllib.parse
 import logging
 import json
 import aiohttp
@@ -93,6 +95,24 @@ class GraphAdminClient:
     def _log(self, level, msg):
         if self._enable_logging:
             logging.log(level, msg)
+
+    @staticmethod
+    def generate_authorization_url(app_id: str, redirect_url: str, state: dict = None) -> str:
+        """
+        Generate authorization url for admin consent flow
+        :param app_id: Also called client id, the identifier of your application in Azure,
+        :param redirect_url: the url to be redirected to after consent was granted (should also be configured on app portal)
+        :param state: any context you wish to get back after consent was granted
+        :return: a valid authorization url
+        """
+        url_parts = list(urllib.parse.urlparse(ADMIN_CONSENT_URL))
+        auth_params = {
+            'redirect_uri': redirect_url,
+            'client_id': app_id,
+            'state': json.dumps(state)
+        }
+        url_parts[4] = urllib.parse.urlencode(auth_params)
+        return urllib.parse.urlunparse(url_parts)
 
     async def _refresh_token(self, app_id, app_secret, tenant_id):
         content, status_code = await self.acquire_token(app_id, app_secret, tenant_id)
