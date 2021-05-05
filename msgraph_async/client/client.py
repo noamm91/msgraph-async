@@ -33,13 +33,14 @@ def authorized(func):
 
 class GraphAdminClient:
 
-    def __init__(self, enable_logging=False):
+    def __init__(self, enable_logging=False, mocked_graph_url=None):
         self._session = None
         self._token = None
         self._managed = False
         self._token_refresh_interval_sec = 3300
         self._scheduler = AsyncIOScheduler()
         self._enable_logging = enable_logging
+        self._mocked_graph_url = mocked_graph_url
 
     @property
     def token_refresh_interval_sec(self):
@@ -59,9 +60,11 @@ class GraphAdminClient:
     def token(self):
         return self._token
 
-    @staticmethod
-    def _build_url(version, resources: typing.List[typing.Tuple], **kwargs):
-        url = GRAPH_BASE_URL + version
+    def _build_url(self, version, resources: typing.List[typing.Tuple], **kwargs):
+        if self._mocked_graph_url:
+            url = self._mocked_graph_url + version
+        else:
+            url = GRAPH_BASE_URL + version
         for resource, resource_id in resources:
             url += resource
             if resource_id:
@@ -96,8 +99,7 @@ class GraphAdminClient:
         if self._enable_logging:
             logging.log(level, msg)
 
-    @staticmethod
-    def generate_authorization_url(app_id: str, redirect_url: str, state: dict = None) -> str:
+    def generate_authorization_url(self, app_id: str, redirect_url: str, state: dict = None) -> str:
         """
         Generate authorization url for admin consent flow
         :param app_id: Also called client id, the identifier of your application in Azure,
@@ -105,7 +107,12 @@ class GraphAdminClient:
         :param state: any context you wish to get back after consent was granted
         :return: a valid authorization url
         """
-        url_parts = list(urllib.parse.urlparse(ADMIN_CONSENT_URL))
+        if self._mocked_graph_url:
+            base_url = self._mocked_graph_url
+        else:
+            base_url = GRAPH_CONSENT_URL
+        consent_url = base_url + "/common/adminconsent"
+        url_parts = list(urllib.parse.urlparse(consent_url))
         auth_params = {
             'redirect_uri': redirect_url,
             'client_id': app_id,

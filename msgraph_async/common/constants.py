@@ -1,7 +1,7 @@
 from enum import Enum
 
 GRAPH_BASE_URL = "https://graph.microsoft.com"
-ADMIN_CONSENT_URL = "https://login.microsoftonline.com/common/adminconsent"
+GRAPH_CONSENT_URL = "https://login.microsoftonline.com"
 V1_EP = "/v1.0"
 BETA_EP = "/beta"
 

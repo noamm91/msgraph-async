@@ -106,8 +106,8 @@ class TestClient(asynctest.TestCase):
         cls._one_drive_token = res_json['access_token']
 
     @staticmethod
-    def get_instance():
-        return GraphAdminClient(enable_logging=True)
+    def get_instance(mocked_graph_url=None):
+        return GraphAdminClient(enable_logging=True, mocked_graph_url=mocked_graph_url)
 
     async def test_list_users_bulk_manual_token_with_top(self):
         i = self.get_instance()
@@ -584,3 +584,32 @@ class TestClient(asynctest.TestCase):
         query_params = urllib.parse.unquote_plus(parts[4])
         self.assertTrue('redirect_uri=https://redirect-here.com/a/b' in query_params)
         self.assertTrue('&state={"foo": "bla"}' in query_params)
+
+    def test_mocked_graph_url_consent_flow(self):
+        i = self.get_instance(mocked_graph_url="http://my-mocked-msgraph-service.com")
+
+        redirect_url = "https://redirect-here.com/a/b"
+        state = {"foo": "bla"}
+
+        auth_url = i.generate_authorization_url(TestClient._test_app_id, redirect_url, state)
+        parts = list(urllib.parse.urlparse(auth_url))
+        self.assertEqual(parts[0], "http")
+        self.assertEqual(parts[1], "my-mocked-msgraph-service.com")
+        self.assertEqual(parts[2], "/common/adminconsent")
+        query_params = urllib.parse.unquote_plus(parts[4])
+        self.assertTrue('redirect_uri=https://redirect-here.com/a/b' in query_params)
+        self.assertTrue('&state={"foo": "bla"}' in query_params)
+
+    @aioresponses()
+    async def test_get_site_mocked_graph_url(self, mocked_res):
+        mocked_base_url = "http://my-mocked-msgraph-service.com"
+        i = self.get_instance(mocked_graph_url=mocked_base_url)
+
+        url = f"{mocked_base_url}/v1.0/sites/sid"
+        res_dict = {"bla": "bla"}
+        mocked_res.get(url, status=500, body=json.dumps(res_dict).encode())
+
+        try:
+            await i.get_site("sid", token=TestClient._token)
+        except BaseHttpError as e:
+            self.assertEqual(e.request_url, url)
