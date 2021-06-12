@@ -163,7 +163,11 @@ class GraphAdminClient:
             "client_id": app_id,
             "client_secret": app_secret,
         }
-        url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        if self._mocked_graph_url:
+            base_url = self._mocked_graph_url
+        else:
+            base_url = GRAPH_CONSENT_URL
+        url = f"{base_url}/{tenant_id}/oauth2/v2.0/token"
         content, status = await self._request("POST", url, data=req_body)
         return content, status
 
