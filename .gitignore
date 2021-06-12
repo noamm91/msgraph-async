@@ -7,3 +7,5 @@ dist/*
 msgraph_async.egg-info/
 .idea/*
 example.md
+cert.pem
+install_certificates.py
