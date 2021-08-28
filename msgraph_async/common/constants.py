@@ -21,6 +21,7 @@ SITES = "/sites"
 DRIVE = "/drive"
 TEAMS = "/teams"
 CHANNELS = "/channels"
+EXTENSIONS = "/extensions"
 
 # next_key
 NEXT_KEY = "@odata.nextLink"

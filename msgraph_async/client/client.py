@@ -126,7 +126,7 @@ class GraphAdminClient:
         self._token = content['access_token']
         self._log(logging.INFO, "token has been refreshed")
 
-    async def _request(self, method, url, headers: dict = None, data: dict = None, expected_statuses=None):
+    async def _request(self, method, url, headers: dict = None, data: dict or str = None, expected_statuses=None):
         if not self._session:
             self._session = aiohttp.ClientSession()
         if not expected_statuses:
@@ -525,3 +525,21 @@ class GraphAdminClient:
         url = self._build_url(V1_EP, [(TEAMS, team_id), (CHANNELS, channel_id)], **kwargs)
         return await self._request("GET", url, kwargs["_req_headers"],
                                    expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def add_extension_to_message(self, user_id, message_id, extension_name, extension_data=None, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id), (EXTENSIONS, None)], **kwargs)
+        data = {
+            "@odata.type": "microsoft.graph.openTypeExtension",
+            "extensionName": extension_name
+        }
+        data.update(extension_data or {})
+        data = json.dumps(data)
+        return await self._request(
+            "POST", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"), data=data)
+
+    @authorized
+    async def delete_extension_from_message(self, user_id, message_id, extension_name, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id), (EXTENSIONS, extension_name)], **kwargs)
+        return await self._request(
+            "DELETE", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))

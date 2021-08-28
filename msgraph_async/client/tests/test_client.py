@@ -382,6 +382,43 @@ class TestClient(asynctest.TestCase):
         self.assertEqual(status, HTTPStatus.OK)
         self.assertEqual(bytes, type(mail))
 
+    async def test_add_extension_to_message_and_delete_it(self):
+        i = self.get_instance()
+
+        extension_name = "ScannedByBitDam"
+        extension_data = {
+            "companyName": "Datto",
+            "verdict": "malicious",
+            "scanId": "testing_open_extension_scan_id"
+        }
+
+        mail, status = await i.add_extension_to_message(
+            TestClient._user_id, TestClient._valid_message_id, extension_name=extension_name,
+            extension_data=extension_data, token=TestClient._token)
+
+        self.assertEqual(status, HTTPStatus.CREATED)
+
+        odata_query = ODataQuery()
+        odata_query.top = TestClient._bulk_size
+        odata_query.filter = Filter([Constrain(attribute="Extensions", logical_operator=LogicalOperator.ANY_EQ, value="ScannedByBitDam", inner_attribute="id")])
+
+        res, status = await i.list_user_mails_bulk(
+            TestClient._user_id, token=TestClient._token, odata_query=odata_query)
+        self.assertEqual(status, HTTPStatus.OK)
+        current_with_extensions = len(res["value"])
+        self.assertTrue(current_with_extensions > 0)
+
+        mail, status = await i.delete_extension_from_message(
+            TestClient._user_id, TestClient._valid_message_id, extension_name=extension_name,
+            token=TestClient._token)
+        self.assertEqual(status, HTTPStatus.NO_CONTENT)
+
+        res, status = await i.list_user_mails_bulk(
+            TestClient._user_id, token=TestClient._token, odata_query=odata_query)
+        self.assertEqual(status, HTTPStatus.OK)
+        after_delete_with_extensions = len(res["value"])
+        self.assertEqual(after_delete_with_extensions, current_with_extensions - 1)
+
     async def test_send_mail_basic_exceptions(self):
         i = self.get_instance()
         mail = {}

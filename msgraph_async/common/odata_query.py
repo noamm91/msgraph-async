@@ -18,6 +18,7 @@ class LogicalOperator(int, Enum):
     GE = 6, "{attribute} ge {val}"
     STARTS_WITH = 7, "startswith({attribute}, '{val}')"
     ENDS_WITH = 8, "endswith({attribute}, '{val}')"
+    ANY_EQ = 9, "{attribute}/any(f:f/{inner_attribute} eq '{val}')"
 
 
 class LogicalConnector(int, Enum):
@@ -34,10 +35,11 @@ class Constrain:
     Constrain example for O365 message resource which has the attribute subject equals to "Trip Ahead" will be instanced
     like this: c = Constrain("subject", LogicalOperator.EQ, "Trip Ahead"
     """
-    def __init__(self, attribute: str, logical_operator: LogicalOperator, value: str):
+    def __init__(self, attribute: str, logical_operator: LogicalOperator, value: str, inner_attribute: str = None):
         self.attribute = attribute
         self.logical_operator = logical_operator
         self.value = value
+        self.inner_attribute = inner_attribute
 
     @property
     def attribute(self) -> str:
@@ -69,8 +71,19 @@ class Constrain:
             raise ValueError("value must be str")
         self._value = val
 
+    @property
+    def inner_attribute(self) -> str:
+        return self._inner_attribute
+
+    @inner_attribute.setter
+    def inner_attribute(self, val: str):
+        if val and type(val) != str:
+            raise ValueError("inner attribute must be str")
+        self._inner_attribute = val
+
     def __str__(self):
-        return self._logical_operator.template.format(attribute=self._attribute, val=self._value)
+        return self._logical_operator.template.format(attribute=self._attribute, val=self._value,
+                                                      inner_attribute=self._inner_attribute)
 
 
 class Filter:
