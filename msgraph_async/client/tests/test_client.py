@@ -34,6 +34,7 @@ class TestClient(asynctest.TestCase):
     _one_drive_token = None
     _mail_start_time = None
     _mail_end_time = None
+    _expected_count = None
     _mail_to_users = None
     _mail_from_user = None
     _one_drive_file_id = None
@@ -64,6 +65,7 @@ class TestClient(asynctest.TestCase):
         cls._resource_data_in_subscription_app_secret = details["resource_data_in_subscription_app_secret"]
         cls._mail_start_time = details["mail_start_time"]
         cls._mail_end_time = details["mail_end_time"]
+        cls._expected_count = details["expected_mails_count"]
         cls._mail_to_users = details["mail_to_users"]
         cls._mail_from_user = details["mail_from_user"]
         cls._total_users_count = 25
@@ -286,6 +288,7 @@ class TestClient(asynctest.TestCase):
         q.top = 6
         start = TestClient._mail_start_time
         end = TestClient._mail_end_time
+        expected_count = TestClient._expected_count
         constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
                       Constrain("receivedDateTime", LogicalOperator.LT, end)]
         q.filter = Filter(constrains, LogicalConnector.AND)
@@ -294,7 +297,7 @@ class TestClient(asynctest.TestCase):
         async for mail in i.list_all_user_mails(TestClient._user_id, token=TestClient._token, odata_query=q):
             mails.append(mail)
 
-        self.assertEqual(9, len(mails))
+        self.assertEqual(expected_count, len(mails))
 
     async def test_list_all_user_mails_filter_mail_address_ne(self):
         i = self.get_instance()
