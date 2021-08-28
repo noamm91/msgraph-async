@@ -5,7 +5,7 @@ The client currently supports the following Graph API:
 * Generating authorization url for admin consent
 * Users basic operations (list/get)
 * Subscriptions operations (create/renew/delete, also for chat resources)
-* Mails operations (list/get/send)
+* Mails operations (list/get/send/add and remove open extensions)
 * SharePoint sites operations (list/get)
 * Drive resources operations (get delta link/list changes)
 * Groups operations (list/get)
