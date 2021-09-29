@@ -21,6 +21,11 @@ class LogicalOperator(int, Enum):
     ANY_EQ = 9, "{attribute}/any(f:f/{inner_attribute} eq '{val}')"
 
 
+class Order(int, Enum):
+    asc = 1
+    desc = 2
+
+
 class LogicalConnector(int, Enum):
     AND = 1
     OR = 2
@@ -120,6 +125,35 @@ class Filter:
         self._logical_connector = value
 
 
+class OrderBy:
+    def __init__(self, attribute, order):
+        self.attribute = attribute
+        self.order = order
+
+    @property
+    def attribute(self) -> str:
+        return self._attribute
+
+    @attribute.setter
+    def attribute(self, value: str):
+        if type(value) is not str:
+            raise ValueError("attribute must be string")
+        self._attribute = value
+
+    @property
+    def order(self) -> Order:
+        return self._order
+
+    @order.setter
+    def order(self, value: Order):
+        if type(value) is not Order:
+            raise ValueError("order must be of type Order")
+        self._order = value
+
+    def __str__(self):
+        return f"{self.attribute} {self.order.name}"
+
+
 class ODataQuery:
     def __init__(self):
         self._count = None
@@ -127,6 +161,7 @@ class ODataQuery:
         self._filter = None
         self._select = None
         self._top = None
+        self._order_by = None
 
     @property
     def count(self) -> bool:
@@ -186,6 +221,17 @@ class ODataQuery:
             raise ValueError("top must be integer")
         self._top = value
 
+    @property
+    def order_by(self) -> int:
+        """Sets the field that will determine the order and the direction."""
+        return self._order_by
+
+    @order_by.setter
+    def order_by(self, value: OrderBy):
+        if type(value) is not OrderBy:
+            raise ValueError("order_by must be OrderBy")
+        self._order_by = value
+
     def _build_filter(self):
         res = ""
         for constrain in self.filter.constrains:  # type: Constrain
@@ -208,5 +254,7 @@ class ODataQuery:
             res.append(f"$select={','.join(self.select)}")
         if self.top:
             res.append(f"$top={str(self.top)}")
+        if self.order_by:
+            res.append(f"$orderby={str(self.order_by)}")
 
         return f"?{'&'.join(res)}"

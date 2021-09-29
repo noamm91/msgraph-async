@@ -543,3 +543,27 @@ class GraphAdminClient:
         url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id), (EXTENSIONS, extension_name)], **kwargs)
         return await self._request(
             "DELETE", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def list_recent_files(self, resource: str, resource_id: str, **kwargs):
+        supported_drive_resources = [USERS, SITES, GROUPS]
+        if resource not in supported_drive_resources:
+            raise GraphClientException(
+                f"list recent files only available for the resources: {supported_drive_resources}")
+        url = self._build_url(V1_EP, [(resource, resource_id), (DRIVE, None), ("/recent", None)], **kwargs)
+        res, status = await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+        next_url = res.get(NEXT_KEY)
+        delta_url = res.get(DELTA_KEY)
+        for drive_item in res["value"]:
+            yield drive_item
+        while next_url:
+            res, status = await self.list_more(next_url, **kwargs)
+            next_url = res.get(NEXT_KEY)
+            delta_url = res.get(DELTA_KEY)
+            for drive_item in res["value"]:
+                yield drive_item
+        if not delta_url:
+            raise GraphClientException("missing deltaLink after iterating through all recent drive items")
+        yield delta_url

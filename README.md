@@ -7,13 +7,14 @@ The client currently supports the following Graph API:
 * Subscriptions operations (create/renew/delete, also for chat resources)
 * Mails operations (list/get/send/add and remove open extensions)
 * SharePoint sites operations (list/get)
-* Drive resources operations (get delta link/list changes)
+* Drive resources operations (get delta link/list changes/list recent changes)
 * Groups operations (list/get)
 * Teams operations (get)
 * Channels operations (get)
 
+The client is async, meaning all functions are awaitables.
 
-The client is async, meaning all functions are awaitable.
+Odata query is also generally supported, you can build the query and pass it to any supported function as key-word argument
 
 The client supports automatic token refresh, this is done by calling `manage_token` passing it app-id, app-secret and tenant-id.
 

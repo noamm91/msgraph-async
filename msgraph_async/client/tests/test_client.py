@@ -492,6 +492,23 @@ class TestClient(asynctest.TestCase):
 
         self.assertIsNotNone(delta_url)
 
+    async def test_list_recent_drive_files(self):
+        i = self.get_instance()
+        odata_query = ODataQuery()
+        odata_query.top = 10
+        odata_query.order_by = OrderBy("lastModifiedDateTime", Order.desc)
+        wanted = 20
+        current = 0
+        recent_drive_items = []
+        async for drive_item in i.list_recent_files(USERS, TestClient._user_id, token=TestClient._token, odata_query=odata_query):
+            if type(drive_item) == dict:
+                current += 1
+                recent_drive_items.append(drive_item)
+            if current == wanted:
+                break
+
+        self.assertEqual(len(recent_drive_items), wanted)
+
     async def test_get_latest_delta_url_site_drive(self):
         i = self.get_instance()
 
