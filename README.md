@@ -7,7 +7,7 @@ The client currently supports the following Graph API:
 * Subscriptions operations (create/renew/delete, also for chat resources)
 * Mails operations (list/get/send/add and remove open extensions)
 * SharePoint sites operations (list/get)
-* Drive resources operations (get delta link/list changes/list recent changes)
+* Drive resources operations (get delta link/list changes/list recent changes/get (by user, by drive))
 * Groups operations (list/get)
 * Teams operations (get)
 * Channels operations (get)
