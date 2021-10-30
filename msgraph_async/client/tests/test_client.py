@@ -38,6 +38,8 @@ class TestClient(asynctest.TestCase):
     _mail_to_users = None
     _mail_from_user = None
     _one_drive_file_id = None
+    _remote_drive_id = None
+    _remote_drive_item_id = None
 
     def setUp(self):
         pass
@@ -70,6 +72,8 @@ class TestClient(asynctest.TestCase):
         cls._mail_from_user = details["mail_from_user"]
         cls._total_users_count = 25
         cls._bulk_size = 10
+        cls._remote_drive_id = details["remote_drive_id"]
+        cls._remote_drive_item_id = details["remote_drive_item_id"]
 
         token_params = {
             'grant_type': 'client_credentials',
@@ -263,7 +267,7 @@ class TestClient(asynctest.TestCase):
         i = self.get_instance()
 
         q = ODataQuery()
-        q.top = 6
+        q.top = 1
         start = TestClient._mail_start_time
         end = TestClient._mail_end_time
         constrains = [Constrain("receivedDateTime", LogicalOperator.GT, start),
@@ -531,6 +535,26 @@ class TestClient(asynctest.TestCase):
 
         self.assertIsNotNone(drive_item_content)
         self.assertEqual(type(drive_item_content), bytes)
+
+    async def test_get_drive_item(self):
+        i = self.get_instance()
+
+        drive_item, status = await i.get_drive_item(
+            TestClient._remote_drive_id, TestClient._remote_drive_item_id, token=TestClient._one_drive_token)
+
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertIsNotNone(drive_item)
+        self.assertEqual(type(drive_item), dict)
+
+    async def test_get_user_drive_item(self):
+        i = self.get_instance()
+
+        drive_item, status = await i.get_user_drive_item(
+            TestClient._user_id, TestClient._remote_drive_item_id, token=TestClient._one_drive_token)
+
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertIsNotNone(drive_item)
+        self.assertEqual(type(drive_item), dict)
 
     async def test_list_some_user_drive_content_using_iterator(self):
         i = self.get_instance()

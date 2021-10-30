@@ -456,8 +456,22 @@ class GraphAdminClient:
         supported_drive_resources = [USERS, SITES, GROUPS]
         if resource not in supported_drive_resources:
             raise GraphClientException(
-                f"getting drive file only available for the resources: {supported_drive_resources}")
+                f"getting drive file content only available for the resources: {supported_drive_resources}")
         url = self._build_url(V1_EP, [(resource, id), (DRIVE, None), ("/items", drive_item_id), ("/content", None)])
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def get_drive_item(self, drive_id: str, item_id: str, **kwargs):
+        url = self._build_url(V1_EP, [(DRIVES, drive_id), ("/items", item_id)])
+        res, status = await self._request("GET", url, kwargs["_req_headers"],
+                                          expected_statuses=kwargs.get("expected_statuses"))
+        return res, status
+
+    @authorized
+    async def get_user_drive_item(self, user_id: str, item_id: str, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (DRIVE, None), ("/items", item_id)])
         res, status = await self._request("GET", url, kwargs["_req_headers"],
                                           expected_statuses=kwargs.get("expected_statuses"))
         return res, status
