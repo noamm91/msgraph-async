@@ -1,5 +1,4 @@
 import os
-import base64
 import json
 import asynctest
 import asyncio
@@ -775,6 +774,13 @@ class TestClient(asynctest.TestCase):
         res, status = await i.delete_mail(TestClient._user_id, TestClient._delete_email_id, token=TestClient._token)
 
         self.assertEqual(HTTPStatus.NO_CONTENT, status)
+
+    async def test_get_user_purpose(self):
+        i = self.get_instance()
+        res, status = await i.get_user_purpose(TestClient._user_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertIsNotNone(res["value"])
 
     async def test_move_mail(self):
         i = self.get_instance()

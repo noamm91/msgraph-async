@@ -662,3 +662,9 @@ class GraphAdminClient:
         body = {"destinationId": destination_folder_id}
         return await self._request(
             "POST", url, kwargs["_req_headers"], json.dumps(body), expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def get_user_purpose(self, user_id, **kwargs):
+        url = self._build_url(BETA_EP, [(USERS, user_id), (MAILBOX_SETTINGS, USER_PURPOSE)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))

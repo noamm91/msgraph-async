@@ -24,6 +24,10 @@ TEAMS = "/teams"
 CHANNELS = "/channels"
 EXTENSIONS = "/extensions"
 MAIL_FOLDERS = "/mailFolders"
+MAILBOX_SETTINGS = "/mailboxSettings"
+
+# Properties
+USER_PURPOSE = "userPurpose"
 
 # operations
 SENDMAIL = "/sendmail"
