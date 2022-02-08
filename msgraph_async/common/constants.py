@@ -15,7 +15,7 @@ SEARCH = "search"
 USERS = "/users"
 SUBSCRIPTIONS = "/subscriptions"
 MAILS = "/messages"
-SENDMAIL = "/sendmail"
+ATTACHMENTS = "/attachments"
 GROUPS = "/groups"
 SITES = "/sites"
 DRIVE = "/drive"
@@ -23,6 +23,11 @@ DRIVES = "/drives"
 TEAMS = "/teams"
 CHANNELS = "/channels"
 EXTENSIONS = "/extensions"
+MAIL_FOLDERS = "/mailFolders"
+
+# operations
+SENDMAIL = "/sendmail"
+MOVE_MAIL = "/move"
 
 # next_key
 NEXT_KEY = "@odata.nextLink"

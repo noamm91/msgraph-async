@@ -1,4 +1,5 @@
 import os
+import base64
 import json
 import asynctest
 import asyncio
@@ -17,6 +18,8 @@ class TestClient(asynctest.TestCase):
     _test_app_secret = None
     _one_drive_app_id = None
     _one_drive_app_secret = None
+    _single_user_app_id = None
+    _single_user_app_secret = None
     _test_tenant_id = None
     resource_data_in_subscription_app_id = None
     resource_data_in_subscription_app_secret = None
@@ -40,6 +43,13 @@ class TestClient(asynctest.TestCase):
     _one_drive_file_id = None
     _remote_drive_id = None
     _remote_drive_item_id = None
+    _folder_id = None
+    _folder_name = None
+    _move_email_folder1 = None
+    _move_email_folder2 = None
+    _move_email_id = None
+    _delete_email_id = None
+    _refresh_token = None
 
     def setUp(self):
         pass
@@ -70,10 +80,19 @@ class TestClient(asynctest.TestCase):
         cls._expected_count = details["expected_mails_count"]
         cls._mail_to_users = details["mail_to_users"]
         cls._mail_from_user = details["mail_from_user"]
-        cls._total_users_count = 25
+        cls._total_users_count = 24
         cls._bulk_size = 10
         cls._remote_drive_id = details["remote_drive_id"]
         cls._remote_drive_item_id = details["remote_drive_item_id"]
+        cls._folder_id = details["folder_id"]
+        cls._folder_name = details["folder_name"]
+        cls._move_email_folder1 = details["move_email_folder1"]
+        cls._move_email_folder2 = details["move_email_folder2"]
+        cls._move_email_id = details["move_email_id"]
+        cls._delete_email_id = details["delete_email_id"]
+        cls._refresh_token = details["refresh_token"]
+        cls._single_user_app_id = details["single_user_app_id"]
+        cls._single_user_app_secret = details["single_user_app_secret"]
 
         token_params = {
             'grant_type': 'client_credentials',
@@ -168,9 +187,16 @@ class TestClient(asynctest.TestCase):
         res, status = await i.get_user(TestClient._user_id, token=TestClient._token)
         self.assertEqual(status, HTTPStatus.OK)
 
-    async def test_acquire_token(self):
+    async def test_acquire_token_by_tenant_id(self):
         i = self.get_instance()
-        token, status = await i.acquire_token(TestClient._test_app_id, TestClient._test_app_secret, TestClient._test_tenant_id)
+        token, status = await i.acquire_token_by_tenant_id(TestClient._test_app_id, TestClient._test_app_secret, TestClient._test_tenant_id)
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertIsNotNone(token["access_token"])
+
+    async def test_acquire_token_by_refresh_token(self):
+        i = self.get_instance()
+        token, status = await i.acquire_token_by_refresh_token(
+            TestClient._single_user_app_id, TestClient._single_user_app_secret, TestClient._refresh_token)
         self.assertEqual(status, HTTPStatus.OK)
         self.assertIsNotNone(token["access_token"])
 
@@ -308,7 +334,7 @@ class TestClient(asynctest.TestCase):
 
         q = ODataQuery()
         q.top = 20
-        start = "2021-03-01T00:00:00.000Z"
+        start = "2022-02-01T00:00:00.000Z"
         q.select = ["id", "from", "replyTo", "sentDateTime", "hasAttachments", "receivedDateTime", "subject", "isRead",
                     "parentFolderId", "sender", "toRecipients", "ccRecipients", "bccRecipients", "internetMessageHeaders"]
 
@@ -694,3 +720,75 @@ class TestClient(asynctest.TestCase):
             await i.get_site("sid", token=TestClient._token)
         except BaseHttpError as e:
             self.assertEqual(e.request_url, url)
+
+    async def test_get_folder_by_known_name(self):
+        i = self.get_instance()
+        res, status = await i.get_mail_folder(TestClient._user_id, TestClient._folder_name, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertEqual(res["id"], TestClient._folder_id)
+
+    async def test_get_folder_by_id(self):
+        i = self.get_instance()
+        res, status = await i.get_mail_folder(TestClient._user_id, TestClient._folder_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertEqual(res["id"], TestClient._folder_id)
+
+    async def test_list_folders_bulk(self):
+        i = self.get_instance()
+        res, status = await i.list_mail_folders_bulk(TestClient._user_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertIsNotNone(res["value"])
+
+    async def test_list_all_mail_folders(self):
+        i = self.get_instance()
+        mail_folders = []
+        async for mail_folder in i.list_all_mail_folders(TestClient._user_id, token=TestClient._token):
+            mail_folders.append(mail_folder)
+        self.assertNotEqual(len(mail_folders), 0)
+
+    async def test_get_mail_attachments(self):
+        i = self.get_instance()
+        res, status = await i.get_mail_attachments(TestClient._user_id, TestClient._move_email_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.OK, status)
+        self.assertIsNotNone(res["value"])
+
+    async def test_add_and_delete_mail_attachment(self):
+        i = self.get_instance()
+        res, status = await i.delete_mail_attachments(TestClient._user_id, TestClient._move_email_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.NO_CONTENT, status)
+
+        await asyncio.sleep(3)
+
+        res, status = await i.add_attachment_to_mail(
+            TestClient._user_id, TestClient._move_email_id, "new.txt", b"new content", token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.CREATED, status)
+
+    @asynctest.skip("can only delete once, need to add the ability to restore maybe and then can be done for same instance of mail")
+    async def test_delete_mail(self):
+        i = self.get_instance()
+        res, status = await i.delete_mail(TestClient._user_id, TestClient.delete_email_id, token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.NO_CONTENT, status)
+
+    async def test_move_mail(self):
+        i = self.get_instance()
+
+        res, status = await i.move_mail(TestClient._user_id, TestClient._move_email_id, TestClient._move_email_folder1,
+                                        token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.CREATED, status)
+        self.assertEqual(res["parentFolderId"], TestClient._move_email_folder1)
+
+        await asyncio.sleep(3)
+
+        res, status = await i.move_mail(TestClient._user_id, TestClient._move_email_id, TestClient._move_email_folder2,
+                                        token=TestClient._token)
+
+        self.assertEqual(HTTPStatus.CREATED, status)
+        self.assertEqual(res["parentFolderId"], TestClient._move_email_folder2)

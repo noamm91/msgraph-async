@@ -1,4 +1,5 @@
 import typing
+import base64
 import urllib
 import urllib.parse
 import logging
@@ -122,7 +123,7 @@ class GraphAdminClient:
         return urllib.parse.urlunparse(url_parts)
 
     async def _refresh_token(self, app_id, app_secret, tenant_id):
-        content, status_code = await self.acquire_token(app_id, app_secret, tenant_id)
+        content, status_code = await self.acquire_token_by_tenant_id(app_id, app_secret, tenant_id)
         self._token = content['access_token']
         self._log(logging.INFO, "token has been refreshed")
 
@@ -130,7 +131,7 @@ class GraphAdminClient:
         if not self._session:
             self._session = aiohttp.ClientSession()
         if not expected_statuses:
-            expected_statuses = (HTTPStatus.OK, HTTPStatus.NO_CONTENT, HTTPStatus.CREATED)
+            expected_statuses = (HTTPStatus.OK, HTTPStatus.NO_CONTENT, HTTPStatus.CREATED, HTTPStatus.ACCEPTED)
         try:
             async with self._session.request(method, url, headers=headers, data=data) as resp:
                 status = resp.status
@@ -148,9 +149,9 @@ class GraphAdminClient:
             self._log(logging.ERROR, f"exception while making a request: {str(e)}")
             raise e
 
-    async def acquire_token(self, app_id, app_secret, tenant_id):
+    async def acquire_token_by_tenant_id(self, app_id, app_secret, tenant_id):
         """
-        Get token from Microsoft
+        Get access token from Microsoft by using target tenant id and application info.
         :param app_id: Also called client id, the identifier of your application in Azure,
         consent must have been granted in order to success
         :param app_secret: Secret of your application in Azure
@@ -168,6 +169,29 @@ class GraphAdminClient:
         else:
             base_url = GRAPH_CONSENT_URL
         url = f"{base_url}/{tenant_id}/oauth2/v2.0/token"
+        content, status = await self._request("POST", url, data=req_body)
+        return content, status
+
+    async def acquire_token_by_refresh_token(self, app_id, app_secret, refresh_token):
+        """
+        Get access token from Microsoft by providing refresh token and application info
+        :param app_id: Also called client id, the identifier of your application in Azure,
+        consent must have been granted in order to success
+        :param app_secret: Secret of your application in Azure
+        :param refresh_token: refresh token for this we can use in order to generate access token for this tenant
+        :return: Dictionary with token data
+        """
+        req_body = {
+            "client_id": app_id,
+            "client_secret": app_secret,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token
+        }
+        if self._mocked_graph_url:
+            base_url = self._mocked_graph_url
+        else:
+            base_url = GRAPH_CONSENT_URL
+        url = f"{base_url}/common/oauth2/v2.0/token"
         content, status = await self._request("POST", url, data=req_body)
         return content, status
 
@@ -405,10 +429,6 @@ class GraphAdminClient:
         return res, status
 
     @authorized
-    async def move_mail(self):
-        pass
-
-    @authorized
     async def list_drive_changes(self, state_link: str, **kwargs):
         """
 
@@ -581,3 +601,64 @@ class GraphAdminClient:
         if not delta_url:
             raise GraphClientException("missing deltaLink after iterating through all recent drive items")
         yield delta_url
+
+    @authorized
+    async def list_mail_folders_bulk(self, user_id, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAIL_FOLDERS, None)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def list_all_mail_folders(self, user_id, **kwargs) -> typing.AsyncGenerator[dict, None]:
+        res, status = await self.list_mail_folders_bulk(user_id, **kwargs)
+        next_url = res.get(NEXT_KEY)
+        for mail_folder in res["value"]:
+            yield mail_folder
+        while next_url:
+            res, status = await self.list_more(next_url, **kwargs)
+            next_url = res.get(NEXT_KEY)
+            for mail_folder in res["value"]:
+                yield mail_folder
+
+    @authorized
+    async def get_mail_folder(self, user_id, folder_id, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAIL_FOLDERS, folder_id)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def get_mail_attachments(self, user_id, message_id, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id), (ATTACHMENTS, None)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def delete_mail_attachments(self, user_id, message_id, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id), (ATTACHMENTS, None)], **kwargs)
+        return await self._request(
+            "DELETE", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def add_attachment_to_mail(self, user_id, message_id, attachment_name, content: bytes, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id), (ATTACHMENTS, None)], **kwargs)
+        b64_str_content = base64.b64encode(content).decode()
+        body = {
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            "name": attachment_name,
+            "contentBytes": b64_str_content
+        }
+        return await self._request(
+            "POST", url, kwargs["_req_headers"], data=json.dumps(body), expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def delete_mail(self, user_id, message_id, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id)], **kwargs)
+        return await self._request(
+            "DELETE", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def move_mail(self, user_id, message_id, destination_folder_id, **kwargs):
+        url = self._build_url(V1_EP, [(USERS, user_id), (MAILS, message_id), (MOVE_MAIL, None)], **kwargs)
+        body = {"destinationId": destination_folder_id}
+        return await self._request(
+            "POST", url, kwargs["_req_headers"], json.dumps(body), expected_statuses=kwargs.get("expected_statuses"))
