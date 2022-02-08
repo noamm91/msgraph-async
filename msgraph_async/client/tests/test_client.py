@@ -772,7 +772,7 @@ class TestClient(asynctest.TestCase):
     @asynctest.skip("can only delete once, need to add the ability to restore maybe and then can be done for same instance of mail")
     async def test_delete_mail(self):
         i = self.get_instance()
-        res, status = await i.delete_mail(TestClient._user_id, TestClient.delete_email_id, token=TestClient._token)
+        res, status = await i.delete_mail(TestClient._user_id, TestClient._delete_email_id, token=TestClient._token)
 
         self.assertEqual(HTTPStatus.NO_CONTENT, status)
 
