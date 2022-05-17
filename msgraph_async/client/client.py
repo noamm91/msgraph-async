@@ -128,7 +128,7 @@ class GraphAdminClient:
         self._log(logging.INFO, "token has been refreshed")
 
     async def _request(self, method, url, headers: dict = None, data: dict or str = None,
-                       expected_statuses: List[HTTPStatus] = None, timeout: int = 60):
+                       expected_statuses: List[HTTPStatus] = None, timeout: int or float = 60):
         if not self._session:
             self._session = aiohttp.ClientSession()
         if not expected_statuses:
