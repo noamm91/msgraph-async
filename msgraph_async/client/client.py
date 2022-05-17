@@ -1,4 +1,3 @@
-import typing
 import base64
 import urllib
 import urllib.parse
@@ -11,6 +10,7 @@ from msgraph_async.common.exceptions import *
 from msgraph_async.common.odata_query import *
 from datetime import datetime, timedelta
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from typing import List
 
 from functools import wraps
 
@@ -127,8 +127,8 @@ class GraphAdminClient:
         self._token = content['access_token']
         self._log(logging.INFO, "token has been refreshed")
 
-    async def _request(self, method, url, headers: dict = None, data: dict or str = None, expected_statuses=None,
-                       timeout: int = None):
+    async def _request(self, method, url, headers: dict = None, data: dict or str = None,
+                       expected_statuses: List[HTTPStatus] = None, timeout: int = None):
         if not self._session:
             self._session = aiohttp.ClientSession()
         if not expected_statuses:
@@ -150,14 +150,14 @@ class GraphAdminClient:
             self._log(logging.ERROR, f"exception while making a request: {str(e)}")
             raise e
 
-    async def acquire_token_by_tenant_id(self, app_id, app_secret, tenant_id, timeout: int = 30):
+    async def acquire_token_by_tenant_id(self, app_id, app_secret, tenant_id, timeout: int = 60):
         """
         Get access token from Microsoft by using target tenant id and application info.
         :param app_id: Also called client id, the identifier of your application in Azure,
         consent must have been granted in order to success
         :param app_secret: Secret of your application in Azure
         :param tenant_id: Id of the tenant you're asking access to its' resources
-        :param timeout: Timeout that indicates how long to wait for response from _request
+        :param timeout: Timeout that indicates how long (in seconds) to wait for response from _request
         :return: Dictionary with token data
         """
         req_body = {
