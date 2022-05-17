@@ -128,7 +128,7 @@ class GraphAdminClient:
         self._log(logging.INFO, "token has been refreshed")
 
     async def _request(self, method, url, headers: dict = None, data: dict or str = None,
-                       expected_statuses: List[HTTPStatus] = None, timeout: int = None):
+                       expected_statuses: List[HTTPStatus] = None, timeout: int = 60):
         if not self._session:
             self._session = aiohttp.ClientSession()
         if not expected_statuses:
@@ -150,7 +150,7 @@ class GraphAdminClient:
             self._log(logging.ERROR, f"exception while making a request: {str(e)}")
             raise e
 
-    async def acquire_token_by_tenant_id(self, app_id, app_secret, tenant_id, timeout: int = 60):
+    async def acquire_token_by_tenant_id(self, app_id, app_secret, tenant_id, timeout: int or float = 60):
         """
         Get access token from Microsoft by using target tenant id and application info.
         :param app_id: Also called client id, the identifier of your application in Azure,

@@ -188,7 +188,24 @@ class TestClient(asynctest.TestCase):
 
     async def test_acquire_token_by_tenant_id(self):
         i = self.get_instance()
-        token, status = await i.acquire_token_by_tenant_id(TestClient._test_app_id, TestClient._test_app_secret, TestClient._test_tenant_id)
+        token, status = await i.acquire_token_by_tenant_id(TestClient._test_app_id, TestClient._test_app_secret,
+                                                           TestClient._test_tenant_id)
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertIsNotNone(token["access_token"])
+
+    async def test_acquire_token_by_tenant_id_timeout(self):
+        i = self.get_instance()
+        try:
+            await i.acquire_token_by_tenant_id(TestClient._test_app_id, TestClient._test_app_secret,
+                                               TestClient._test_tenant_id, timeout=0.01)
+            self.fail()
+        except asyncio.exceptions.TimeoutError:
+            pass
+
+    async def test_acquire_token_by_tenant_id_no_timeout(self):
+        i = self.get_instance()
+        token, status = await i.acquire_token_by_tenant_id(TestClient._test_app_id, TestClient._test_app_secret,
+                                                           TestClient._test_tenant_id, timeout=0)
         self.assertEqual(status, HTTPStatus.OK)
         self.assertIsNotNone(token["access_token"])
 
