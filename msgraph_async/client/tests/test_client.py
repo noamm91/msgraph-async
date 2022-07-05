@@ -6,6 +6,7 @@ import requests
 import urllib
 import urllib.parse
 from aioresponses import aioresponses
+from datetime import datetime, timedelta
 from msgraph_async.client.client import GraphAdminClient
 from msgraph_async.common.constants import *
 from msgraph_async.common.exceptions import *
@@ -200,7 +201,7 @@ class TestClient(asynctest.TestCase):
             await i.acquire_token_by_tenant_id(TestClient._test_app_id, TestClient._test_app_secret,
                                                TestClient._test_tenant_id, timeout=0.01)
             self.fail()
-        except asyncio.exceptions.TimeoutError:
+        except asyncio.TimeoutError:
             pass
 
     async def test_acquire_token_by_tenant_id_no_timeout(self):
@@ -210,6 +211,7 @@ class TestClient(asynctest.TestCase):
         self.assertEqual(status, HTTPStatus.OK)
         self.assertIsNotNone(token["access_token"])
 
+    @asynctest.skip("refresh token expires every 90 days, so run this test only after putting valid refresh token")
     async def test_acquire_token_by_refresh_token(self):
         i = self.get_instance()
         token, status = await i.acquire_token_by_refresh_token(
@@ -351,7 +353,9 @@ class TestClient(asynctest.TestCase):
 
         q = ODataQuery()
         q.top = 20
-        start = "2022-02-01T00:00:00.000Z"
+        # start = "2022-07-01T00:00:00.000Z"
+        start = datetime.utcnow() - timedelta(days=10)
+        start = start.strftime("%Y-%m-%dT%H:%M:%S.%f") + "0Z"
         q.select = ["id", "from", "replyTo", "sentDateTime", "hasAttachments", "receivedDateTime", "subject", "isRead",
                     "parentFolderId", "sender", "toRecipients", "ccRecipients", "bccRecipients", "internetMessageHeaders"]
 
