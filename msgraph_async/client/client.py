@@ -670,3 +670,15 @@ class GraphAdminClient:
         url = self._build_url(BETA_EP, [(USERS, user_id), (MAILBOX_SETTINGS, USER_PURPOSE)], **kwargs)
         return await self._request(
             "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def list_domains(self, **kwargs):
+        url = self._build_url(V1_EP, [(DOMAINS, None)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def get_domain(self, domain_id, **kwargs):
+        url = self._build_url(V1_EP, [(DOMAINS, domain_id)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
