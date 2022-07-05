@@ -12,6 +12,7 @@ The client currently supports the following Graph API:
 * Groups operations (list/get)
 * Teams operations (get)
 * Channels operations (get)
+* Domains operations (list/get)
 
 The client is async, meaning all functions are awaitables.
 

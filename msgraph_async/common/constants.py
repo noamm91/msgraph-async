@@ -25,6 +25,7 @@ CHANNELS = "/channels"
 EXTENSIONS = "/extensions"
 MAIL_FOLDERS = "/mailFolders"
 MAILBOX_SETTINGS = "/mailboxSettings"
+DOMAINS = "/domains"
 
 # Properties
 USER_PURPOSE = "userPurpose"

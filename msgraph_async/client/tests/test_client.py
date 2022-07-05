@@ -49,6 +49,7 @@ class TestClient(asynctest.TestCase):
     _move_email_id = None
     _delete_email_id = None
     _refresh_token = None
+    _domain_id = None
 
     def setUp(self):
         pass
@@ -815,3 +816,13 @@ class TestClient(asynctest.TestCase):
 
         self.assertEqual(HTTPStatus.CREATED, status)
         self.assertEqual(res["parentFolderId"], TestClient._move_email_folder2)
+
+    async def test_list_domains(self):
+        i = self.get_instance()
+        res, status = await i.list_domains(token=TestClient._token)
+        self.assertEqual(status, HTTPStatus.OK)
+    
+    async def test_get_domain(self):
+        i = self.get_instance()
+        res, status = await i.get_domain(TestClient._domain_id, token=TestClient._token)
+        self.assertEqual(status, HTTPStatus.OK)
