@@ -51,6 +51,7 @@ class TestClient(asynctest.TestCase):
     _delete_email_id = None
     _refresh_token = None
     _domain_id = None
+    _service_principle_id=None
 
     def setUp(self):
         pass
@@ -830,3 +831,23 @@ class TestClient(asynctest.TestCase):
         i = self.get_instance()
         res, status = await i.get_domain(TestClient._domain_id, token=TestClient._token)
         self.assertEqual(status, HTTPStatus.OK)
+
+    async def test_list_service_principles(self):
+        i = self.get_instance()
+        res, status = await i.list_service_principles(token=TestClient._token)
+        self.assertEqual(status, HTTPStatus.OK)
+
+    async def test_get_service_principle(self):
+        i = self.get_instance()
+        res, status = await i.get_service_principle(TestClient._service_principle_id, token=TestClient._token)
+        self.assertEqual(status, HTTPStatus.OK)
+
+    async def test_get_service_principle_with_filter(self):
+        i = self.get_instance()
+        microsoft_discovery_service_app_id = "'6f82282e-0070-4e78-bc23-e6320c5fa7de'"
+        odata_query = ODataQuery()
+        odata_query.filter = Filter([Constrain("appId", LogicalOperator.EQ, microsoft_discovery_service_app_id)])
+        res, status = await i.get_service_principle(TestClient._service_principle_id, token=TestClient._token,
+                                                    odata_query=odata_query)
+        self.assertEqual(status, HTTPStatus.OK)
+        self.assertEqual(len(res['value']), 1)
