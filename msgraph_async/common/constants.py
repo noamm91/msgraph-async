@@ -26,6 +26,7 @@ EXTENSIONS = "/extensions"
 MAIL_FOLDERS = "/mailFolders"
 MAILBOX_SETTINGS = "/mailboxSettings"
 DOMAINS = "/domains"
+SERVICE_PRINCIPALS = "/servicePrincipals"
 
 # Properties
 USER_PURPOSE = "userPurpose"

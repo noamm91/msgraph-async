@@ -682,3 +682,17 @@ class GraphAdminClient:
         url = self._build_url(V1_EP, [(DOMAINS, domain_id)], **kwargs)
         return await self._request(
             "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def list_service_principles(self, **kwargs):
+        url = self._build_url(V1_EP, [(SERVICE_PRINCIPALS, None)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+    @authorized
+    async def get_service_principle(self, service_principle_id=None, **kwargs):
+        url = self._build_url(V1_EP, [(SERVICE_PRINCIPALS, service_principle_id)], **kwargs)
+        return await self._request(
+            "GET", url, kwargs["_req_headers"], expected_statuses=kwargs.get("expected_statuses"))
+
+
