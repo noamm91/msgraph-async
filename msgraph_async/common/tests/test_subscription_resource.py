@@ -39,15 +39,15 @@ class TestODataQuery(unittest.TestCase):
         i = SubscriptionResources.GroupDriveRoot
         filled = i.value.format(self._user_id)
         self.assertEqual(i.resource_data_included, False)
-        self.assertEqual(filled, f"groups/{self._user_id}/drive/root")
+        self.assertEqual(filled, f"groups/{self._user_id}")
 
     def test_tenant_teams_channels(self):
         i = SubscriptionResources.TenantTeamsChannels
         self.assertEqual(i.resource_data_included, True)
-        self.assertEqual(i.value, "teams/allMessages")
+        self.assertEqual(i.value, "teams/getAllMessages")
 
     def test_tenant_chats_all_messages(self):
         i = SubscriptionResources.TenantChats
         self.assertEqual(i.resource_data_included, True)
-        self.assertEqual(i.value, "chats/allMessages")
+        self.assertEqual(i.value, "chats/getAllMessages")
 
