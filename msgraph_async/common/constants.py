@@ -55,6 +55,6 @@ class SubscriptionResources(str, Enum):
     Inbox               = "users('{}')/mailFolders('Inbox')/messages", False
     DriveRoot           = "users/{}/drive/root", False
     SiteDocumentLibrary = "sites/{}/drive/root", False
-    GroupDriveRoot      = "groups/{}/drive/root", False
-    TenantTeamsChannels = "teams/allMessages", True
-    TenantChats         = "chats/allMessages", True
+    GroupDriveRoot      = "groups/{}", False
+    TenantTeamsChannels = "teams/getAllMessages", True
+    TenantChats         = "chats/getAllMessages", True
